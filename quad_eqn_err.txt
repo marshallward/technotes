@@ -1,0 +1,63 @@
+Minimizing quadratic error
+==========================
+
+Solving the quadratic equation
+------------------------------
+
+Familiar to everyone, but let's get started.  I'll try to focus a bit more
+carefully on the signs of the terms.
+
+We seek solutions to the quadratic equation.
+
+.. math::
+
+   a x^2 + b x + c = 0
+
+We are only interested in real coefficients (:math:`a,b,c \in R`) and, for the
+most part, real solutions (:math:`x \in R`).
+
+Assume that :math:`a \neq 0` and complete the square.
+
+.. math::
+
+   a \left( x^2 + \frac{b}{a} x + \frac{b^2}{4a} \right)
+      - \frac{b^2}{4a} + c = 0
+
+Simplify:
+   
+.. math::
+
+   \left(x + \frac{b}{2a}\right)^2 = \frac{b^2 - 4ac}{4a^2}
+
+And then get the final pair of solutions.
+
+.. math::
+
+   x = -\frac{b}{2a} \pm \frac{\sqrt{b^2 - 4ac}}{2|a|},
+
+Although the sign of :math:`a` has been lost to the square root of the RHS, it
+can be integrated into the solution.  Write :math:`a` as :math:`\text{sgn}(a)
+|a|`, where sgn() is the sign of a.
+
+.. math::
+
+   x = -\frac{b}{2a} \pm \text{sgn}(a) \frac{\sqrt{b^2 - 4ac}}{2a}
+
+The pair of solutions is unchanged, regardless of the sign of :math:`a`.  So
+without loss of generality,
+
+.. math::
+
+   x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+
+
+Floating-point evaluation
+-------------------------
+
+Errors due to floating-point approximation can dominate calculations associated
+with the discriminant, :math:`d = \sqrt{b^2 - 4ac}`.
+
+1. :math:`4ac \ll b^2`
+
+   If :math:`4ac` is small, then the discriminant is approximately equal to
+   :math:`b` when the signs differ. 
