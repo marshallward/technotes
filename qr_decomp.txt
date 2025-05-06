@@ -1,0 +1,93 @@
+================
+QR Decomposition
+================
+
+Basic Understanding
+===================
+
+What is QR decomposition?
+-------------------------
+
+Divide a matrix into an *orthonormal matrix* :math:`Q` and an upper triangular
+matrix :math:`R`.
+
+...and what is an orthonormal matrix?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:math:`Q` is *orthonormal* if it preserves dot products after vector
+transformation.  That is,
+
+.. math::
+
+   Q \mathbf{u} \cdot Q \mathbf{v} = \mathbf{u} \cdot \mathbf{v}
+
+Write the dot product as a transpose, and
+
+.. math::
+
+   \mathbf{u}^T Q^T Q \mathbf{v} = \mathbf{u}^T \mathbf{v}
+
+That is,
+
+.. math::
+
+   \mathbf{u}^T \left(Q^T Q - I\right) \mathbf{v} = 0
+
+Or, in its more common form, :math:`Q^T Q = I`.
+   
+   
+
+
+
+What are the Q and R matrices in QR decomposition?
+--------------------------------------------------
+
+
+What is the shape of Q and R if the input matrix is m×n with m≥n?
+-----------------------------------------------------------------
+
+
+How does QR decomposition differ from LU decomposition?
+-------------------------------------------------------
+
+
+Can all matrices be decomposed using QR?
+----------------------------------------
+
+
+Conceptual & Theoretical
+========================
+
+Is the QR decomposition unique? Under what conditions?
+
+How is the QR decomposition related to the Gram-Schmidt process?
+
+Why is the Q matrix orthogonal (or unitary)?
+
+Why might you use QR decomposition instead of LU for solving linear systems?
+
+Explain the role of QR decomposition in solving least squares problems.
+
+
+Computational/Algorithmic
+=========================
+
+How do you compute QR decomposition using Gram-Schmidt?
+
+What is the difference between classical and modified Gram-Schmidt?
+
+Describe how Householder reflections are used in QR decomposition.
+
+What are Givens rotations, and how are they applied in QR decomposition?
+
+Which method is numerically more stable: Gram-Schmidt or Householder? Why?
+
+
+Applications
+============
+
+How is QR decomposition used in solving overdetermined systems?
+
+Explain how QR decomposition is used in eigenvalue algorithms (e.g., QR algorithm).
+
+Describe a practical scenario where QR decomposition would be preferable to SVD.

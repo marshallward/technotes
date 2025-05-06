@@ -1,6 +1,6 @@
 PANDOC = pandoc
-OUT = out.pdf
-TXT = quad_eqn_err.txt
+TXT = qr_decomp.txt quad_eqn_err.txt
+OUT = $(TXT:.txt=.pdf)
 
 FLAGS = \
   -V "mainfont:DejaVu Serif" \
@@ -9,7 +9,7 @@ FLAGS = \
 
 all: $(OUT)
 
-$(OUT): $(TXT)
+%.pdf: %.txt
 	$(PANDOC) $(FLAGS) -f rst -t pdf -o $@ $<
 
 # TODO: Support rst2pdf output nicely?
