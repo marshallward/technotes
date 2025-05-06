@@ -11,6 +11,7 @@ What is QR decomposition?
 Divide a matrix into an *orthonormal matrix* :math:`Q` and an upper triangular
 matrix :math:`R`.
 
+
 ...and what is an orthonormal matrix?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -34,9 +35,53 @@ That is,
    \mathbf{u}^T \left(Q^T Q - I\right) \mathbf{v} = 0
 
 Or, in its more common form, :math:`Q^T Q = I`.
-   
-   
 
+The most common example of an orthogonal matrix is the rotation matrix,
+
+.. math::
+
+   R(\theta) = \begin{pmatrix}
+      \cos \theta & \sin \theta \\
+      -\sin \theta & \cos \theta
+   \end{pmatrix}
+
+The most interesting property of the orthogonal matrix is the *orthogonality*
+of its column vectors.  If :math:`Q = ( \mathbf{q}_1, \mathbf{q}_2,
+\mathbf{q}_3, \ldots )`, then
+
+.. math::
+
+   Q^T Q &=
+      \begin{pmatrix}
+         \mathbf{q}_1 \\ \mathbf{q}_2 \\ \mathbf{q}_3 \\ \vdots
+      \end{pmatrix}
+      \begin{pmatrix}
+         \mathbf{q}_1 & \mathbf{q}_2 & \mathbf{q}_3 & \cdots
+      \end{pmatrix}
+
+   &=
+      \begin{pmatrix}
+         \mathbf{q}_1^T \mathbf{q}_1
+         & \mathbf{q}_1^T \mathbf{q}_2
+         & \mathbf{q}_1^T \mathbf{q}_3
+         & \cdots \\
+         \mathbf{q}_2^T \mathbf{q}_1
+         & \mathbf{q}_2^T \mathbf{q}_2
+         & \mathbf{q}_2^T \mathbf{q}_3
+         & \cdots \\
+         \mathbf{q}_3^T \mathbf{q}_1
+         & \mathbf{q}_3^T \mathbf{q}_2
+         & \mathbf{q}_3^T \mathbf{q}_3
+         & \cdots \\
+         \vdots & & & \ddots
+      \end{pmatrix}
+
+Since :math:`Q^T Q = I`, it must be that :math:`\mathbf{q}_i^T \mathbf{q}_j =
+\delta_ij`.  That is, *the column vectors of :math:`Q` form an orthogonal
+basis.*
+
+The natural orthogonality of :math:`Q` is the basis for the :math:`QR`
+decomposition.
 
 
 What are the Q and R matrices in QR decomposition?
