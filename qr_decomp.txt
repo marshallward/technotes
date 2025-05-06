@@ -11,6 +11,11 @@ What is QR decomposition?
 Divide a matrix into an *orthonormal matrix* :math:`Q` and an upper triangular
 matrix :math:`R`.
 
+The method is based on seeking a solution to :math:`Ax = y` along orthogonal
+basis functions determined by :math:`Q`.  But :math:`QR` decomposition is most
+often applied to overdetermined problems by seeking and solutions to 
+minimum :math:`|Ax - y|`.  This is the least-squares method.
+
 
 ...and what is an orthonormal matrix?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -45,6 +50,19 @@ The most common example of an orthogonal matrix is the rotation matrix,
       -\sin \theta & \cos \theta
    \end{pmatrix}
 
+which rotates a vector by angle :math:`\theta`.
+
+Somewhat less common is the reflection matrix,
+
+.. math::
+
+   r(\theta) = \begin{pmatrix}
+      \cos \theta & \sin \theta \\
+      \sin \theta & -\cos \theta
+   \end{pmatrix}
+
+which reflects a vector along a line of angle :math:`\theta / 2`.
+
 The most interesting property of the orthogonal matrix is the *orthogonality*
 of its column vectors.  If :math:`Q = ( \mathbf{q}_1, \mathbf{q}_2,
 \mathbf{q}_3, \ldots )`, then
@@ -77,11 +95,8 @@ of its column vectors.  If :math:`Q = ( \mathbf{q}_1, \mathbf{q}_2,
       \end{pmatrix}
 
 Since :math:`Q^T Q = I`, it must be that :math:`\mathbf{q}_i^T \mathbf{q}_j =
-\delta_ij`.  That is, *the column vectors of :math:`Q` form an orthogonal
-basis.*
-
-The natural orthogonality of :math:`Q` is the basis for the :math:`QR`
-decomposition.
+\delta_{ij}`.  That is, the column vectors of :math:`Q` form an orthogonal
+basis.
 
 
 What are the Q and R matrices in QR decomposition?
