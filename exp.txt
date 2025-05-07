@@ -8,12 +8,61 @@ Steps to implement an exponent function.
 Range reduction
 ===============
 
-Generally start by substitution of :math:`exp()` in floating point form,
-:math:`(-1)^s 2^n (1 + \alpha)`.  Since :math:`\exp()` is always positive, we
-can ignore the sign and the floating point form is
+Like many floating point solvers, one only need focus on the significand, since
+the exponent can often be solved quickly.
+
+In floating point form, :math:`e^x = 2^k (1 + \alpha)` for some integer
+:math:`k` and real :math:`\alpha`.  Floating point would normally require that
+:math:`0 \le \alpha < 1`, but we don't yet need to apply this constraint.  The
+relationship between :math:`x`, :math:`k`, and :math:`\alpha` is
 
 .. math::
 
-   \exp(x) &= 2^k (1 + \alpha) \\
-   \Rightarrow x &= \log (2^k (1 + \alpha)) \\
-      &= k \log 2 + \log(1 + \alpha)
+   x = k \log 2 + \log (1 + \alpha)
+
+This can be simplified without loss of generality by defining :math:`r = \log
+(1 + \alpha)`, so that :math:`x = k \log 2 + r`.  The equation then becomes
+
+.. math::
+
+   e^x = 2^k e^r.
+
+If :math:`k` is known, then the problem is reduced to evaluating :math:`e^r`.
+The simplest path is to assign a unique value of :math:`k` for a given
+:math:`x`.
+
+* :math:`0 \le \alpha < 1`
+
+  If we interpret :math:`\alpha` as the floating point significand, then the
+  floor operator offers a simple expression for :math:`k`, since
+  
+  .. math::
+
+     \left\lfloor \frac{x}{\log 2} \right\rfloor
+        &= k + \left\lfloor \frac{1 + \alpha}{\log 2} \right\rfloor \\
+        &= k.
+
+  This makes it simply to apply floating point analysis to the result, and
+  avoids any rounding rule ambiguity, but the nonsymmetric range of :math:`r`
+  can make it slightly more challenging to estimate :math:`e^r`.
+
+* :math:`-\tfrac{1}{2} \log 2 \le r < \tfrac{1}{2} \log 2`
+
+  Replacing the floor operator with a rounding operator produces a symmetric
+  range for :math:`r`.
+
+  .. math::
+
+     \left[ \frac{x}{\log 2} \right] = k + \left[ \frac{r}{\log 2} \right]
+
+  :math:`k` is unique if :math:`-\tfrac{1}{2} < \tfrac{r}{\log 2} <
+  \tfrac{1}{2}`.  This produces a symmetric domain which can improve the
+  estimation of :math:`e^r`.  But it also introduces ambiguities about
+  rounding, including sensitivity to the floating point rounding model which
+  may not be known.  Nonetheless, this seems to be the most common method.
+
+Whatever one chooses, one ends up with a clear expression for :math:`k`, and
+only needs to evaluate :math:`e^r` over a smaller domain with clear bounds.
+
+
+

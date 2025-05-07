@@ -8,13 +8,12 @@ Basic Understanding
 What is QR decomposition?
 -------------------------
 
-Divide a matrix into an *orthonormal matrix* :math:`Q` and an upper triangular
-matrix :math:`R`.
+Any matrix :math:`A` can be decomposed as a product of an *orthonormal matrix*
+:math:`Q` and an upper triangular matrix :math:`R`.
 
-The method is based on seeking a solution to :math:`Ax = y` along orthogonal
-basis functions determined by :math:`Q`.  But :math:`QR` decomposition is most
-often applied to overdetermined problems by seeking and solutions to 
-minimum :math:`|Ax - y|`.  This is the least-squares method.
+.. math::
+
+   A = Q R
 
 
 ...and what is an orthonormal matrix?
@@ -27,19 +26,20 @@ transformation.  That is,
 
    Q \mathbf{u} \cdot Q \mathbf{v} = \mathbf{u} \cdot \mathbf{v}
 
-Write the dot product as a transpose, and
+or using transpose operations,
 
 .. math::
 
-   \mathbf{u}^T Q^T Q \mathbf{v} = \mathbf{u}^T \mathbf{v}
+   \mathbf{u}^T Q^T Q \mathbf{v} = \mathbf{u}^T \mathbf{v}.
 
-That is,
+   \Rightarrow \mathbf{u}^T \left(Q^T Q - I\right) \mathbf{v} = 0
+
+Since :math:`\mathbf{u}` and :math:`\mathbf{v}` are arbitrary, :math:`Q^T Q =
+I` and we get the orthogonality property,
 
 .. math::
 
-   \mathbf{u}^T \left(Q^T Q - I\right) \mathbf{v} = 0
-
-Or, in its more common form, :math:`Q^T Q = I`.
+   Q^{-1} = Q^T.
 
 The most common example of an orthogonal matrix is the rotation matrix,
 
@@ -52,7 +52,7 @@ The most common example of an orthogonal matrix is the rotation matrix,
 
 which rotates a vector by angle :math:`\theta`.
 
-Somewhat less common is the reflection matrix,
+Another is the reflection matrix,
 
 .. math::
 
@@ -61,7 +61,8 @@ Somewhat less common is the reflection matrix,
       \sin \theta & -\cos \theta
    \end{pmatrix}
 
-which reflects a vector along a line of angle :math:`\theta / 2`.
+which reflects a vector along a line of angle :math:`\theta / 2`.  Both are
+important tools for construction of :math:`Q`.
 
 The most interesting property of the orthogonal matrix is the *orthogonality*
 of its column vectors.  If :math:`Q = ( \mathbf{q}_1, \mathbf{q}_2,
@@ -82,7 +83,7 @@ of its column vectors.  If :math:`Q = ( \mathbf{q}_1, \mathbf{q}_2,
          \mathbf{q}_1^T \mathbf{q}_1
          & \mathbf{q}_1^T \mathbf{q}_2
          & \mathbf{q}_1^T \mathbf{q}_3
-         & \cdots \\
+         \cdots \\
          \mathbf{q}_2^T \mathbf{q}_1
          & \mathbf{q}_2^T \mathbf{q}_2
          & \mathbf{q}_2^T \mathbf{q}_3
@@ -99,8 +100,33 @@ Since :math:`Q^T Q = I`, it must be that :math:`\mathbf{q}_i^T \mathbf{q}_j =
 basis.
 
 
-What are the Q and R matrices in QR decomposition?
---------------------------------------------------
+Why would you do this?
+----------------------
+
+If you know :math:`Q` and `R`, then you can solve systems of equations without
+calculating an inverse operator.
+
+.. math::
+
+   A \mathbf{x} = Q R \mathbf{x} = \mathbf{b}
+
+   \Rightarrow R \mathbf{x} = Q^{-1} \mathbf{b} = Q^T \mathbf{b}
+
+Since :math:`R` is upper triangular, it's just *back substitution* to get
+:math:`\mathbf{x}`.
+
+(Nearly orthogonal decomposition is motivated by this result, e.g.
+:math:`e^{\pm ix}` in Fourier analysis.)
+
+Other uses (to be explained below)
+
+* Solving an overdetermined system based on minimizing :math:`|Ax - b|`.
+
+* Computing the eigenvalues of :math:`A` ("QR algorithm")
+
+* :math:`Q` provides a way to change the basis of :math:`\mathbf{x}` (although
+  I don't know how useful this is unless you have some control over :math:`Q`)
+
 
 
 What is the shape of Q and R if the input matrix is m×n with m≥n?
