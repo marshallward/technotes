@@ -1,0 +1,19 @@
+===========================
+Implementation of ``exp()``
+===========================
+
+Steps to implement an exponent function.
+
+
+Range reduction
+===============
+
+Generally start by substitution of :math:`exp()` in floating point form,
+:math:`(-1)^s 2^n (1 + \alpha)`.  Since :math:`\exp()` is always positive, we
+can ignore the sign and the floating point form is
+
+.. math::
+
+   \exp(x) &= 2^k (1 + \alpha) \\
+   \Rightarrow x &= \log (2^k (1 + \alpha)) \\
+      &= k \log 2 + \log(1 + \alpha)
