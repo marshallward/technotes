@@ -65,4 +65,23 @@ Whatever one chooses, one ends up with a clear expression for :math:`k`, and
 only needs to evaluate :math:`e^r` over a smaller domain with clear bounds.
 
 
+Table-based ranges (TODO)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The range can be further reduced by dividing up :math:`r` into smaller
+subdomains, then using lookup tables to interpolate outward.  But I don't know
+much about that and I'm going to stop here.
+
+
+Polynomial Approximation
+========================
+
+Next step is to approximate :math:`e^r` over the range of :math:`r`.  Herein,
+:math:`k = \left[ \tfrac{x}{\log 2} \right]` and :math:`r \in
+\left(-\tfrac{1}{2} \log 2, \tfrac{1}{2} \log 2 \right)`.
+
+Many polynomial estimations are bad: Taylor series is based on a single point,
+Pade approximants are too computationally expensive.  The common choice is the
+*minimax polynomial*, built by the *Remez algorithm* from *Chebyshev nodes*.
+
 
