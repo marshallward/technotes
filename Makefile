@@ -1,5 +1,5 @@
 PANDOC = pandoc
-TXT = exp.txt qr_decomp.txt quad_eqn_err.txt
+TXT = exp/exp.txt qr_decomp.txt quad_eqn_err.txt
 OUT = $(TXT:.txt=.pdf)
 
 FLAGS = \
