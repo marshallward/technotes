@@ -2,6 +2,7 @@ import numpy as np
 from numpy.polynomial.polynomial import Polynomial
 from scipy.special import cosdg
 import matplotlib.pyplot as plt
+import itertools
 
 # Construct a polynomial of order 3
 order = 5
@@ -49,25 +50,58 @@ coeff = np.linalg.solve(R, f)
 #print(f)
 #print(coeff)
 
+mm_poly = Polynomial(coeff[:-1])
+
 #---
 
 # Check results
 
 # Plot the first estimate
 x = np.linspace(-bound, bound, 100)
-mm_poly = Polynomial(coeff[:-1])
+err = np.exp(x) - mm_poly(x)
 
-plt.plot(x, np.exp(x) - mm_poly(x))
+plt.plot(x, err)
 plt.show()
 
 #---
 
-# Try a second iteration of Remez
+# Try a second iteration of Remez.
+# We need to find the new extrema.
 
-# 1. Find the new extrema
+# 1. Find the roots of the error function on a dense grid.
 
+x = np.linspace(-bound, bound, 1000)
+err = np.exp(x) - mm_poly(x)
 
+# TODO: Find a better method
+roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
+roots = np.insert(roots, 0, 0)
+roots = np.append(roots, len(err)-1)
+print(roots)
 
+# Now find the extrema in each segment
+# TODO: Again, write our own algorithm
+#ext = [l + np.abs(err[l:r]).argmax() for l, r in itertools.pairwise(roots)]
+ext = np.array([x[l + np.abs(err[l:r]).argmax()] for l, r in itertools.pairwise(roots)])
+print(ext)
 
+# And now rebuild the coefficients
+nodes = ext
+n_nodes = len(nodes)
+R = np.vander(nodes, N=n_nodes-1, increasing=True)
+R = np.append(R,[[(-1)**k] for k in range(n_nodes)],axis=1)
+f = np.exp(nodes)
 
+# Now solve for the coefficients
+coeff = np.linalg.solve(R, f)
 
+## Check output
+#print(R)
+#print(f)
+#print(coeff)
+
+mm_poly = Polynomial(coeff[:-1])
+
+# And check it again
+plt.plot(np.exp(x) - mm_poly(x))
+plt.show()
