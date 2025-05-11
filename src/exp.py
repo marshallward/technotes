@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import itertools
 
 # Construct a polynomial of order 3
-order = 5
+order = 7
 
 # For now, interpolate from the rescaled range [-0.5 ln(2), +0.5 ln(2)]
 # TODO: Someday, look into table lookup into a smaller range.
@@ -33,54 +33,41 @@ print(nodes)
 
 
 #---
-x = np.linspace(-bound, bound, 1000)
+x = np.linspace(-bound, bound, 10000)
 
-# Start the Remez minimax solver.  Set up the first iteration.
+# Start the Remez minimax solver.
+for nr in range(20):
 
-# Construct the matrix
-R = np.vander(nodes, N=n_nodes-1, increasing=True)
-# TODO: Better way to do this?
-R = np.append(R, [[(-1)**k] for k in range(n_nodes)], axis=1)
-f = np.exp(nodes)
-coeff = np.linalg.solve(R, f)
+    # Construct the matrix
+    R = np.vander(nodes, N=n_nodes-1, increasing=True)
+    # TODO: Better way to do this?
+    R = np.append(R, [[(-1)**k] for k in range(n_nodes)], axis=1)
+    f = np.exp(nodes)
+    coeff = np.linalg.solve(R, f)
 
-# And build the polynomial
-mm_poly = Polynomial(coeff[:-1])
+    # And build the polynomial
+    mm_poly = Polynomial(coeff[:-1])
 
-err = np.exp(x) - mm_poly(x)
+    err = np.exp(x) - mm_poly(x)
 
-# Plot the first estimate
-plt.plot(x, err)
-plt.show()
+    # Plot the first estimate
+    plt.plot(x, err)
+    plt.title(f"Error {coeff[-1]}")
+    plt.show()
 
-# Update the positions of the extrema if necessary
-# Find the roots of the error function on a dense grid.
-# TODO: Find a better method
-roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
-roots = np.insert(roots, 0, 0)
-roots = np.append(roots, len(err)-1)
-print("roots?", roots)
+    # Update the positions of the extrema if necessary
+    # Find the roots of the error function on a dense grid.
+    # TODO: Find a better method
+    roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
+    roots = np.insert(roots, 0, 0)
+    roots = np.append(roots, len(err)-1)
+    print("roots?", roots)
 
-# Now find the extrema in each segment
-# TODO: Again, write our own algorithm
-nodes = np.array([
-    x[l + np.abs(err[l:r]).argmax()]
-    for l, r in itertools.pairwise(roots)
-])
-n_nodes = len(nodes)
-print("nodes?", nodes)
-
-R = np.vander(nodes, N=n_nodes-1, increasing=True)
-R = np.append(R,[[(-1)**k] for k in range(n_nodes)],axis=1)
-f = np.exp(nodes)
-
-# Now solve for the coefficients
-coeff = np.linalg.solve(R, f)
-
-mm_poly = Polynomial(coeff[:-1])
-
-err = np.exp(x) - mm_poly(x)
-
-# And check it again
-plt.plot(x, err)
-plt.show()
+    # Now find the extrema in each segment
+    # TODO: Again, write our own algorithm
+    nodes = np.array([
+        x[l + np.abs(err[l:r]).argmax()]
+        for l, r in itertools.pairwise(roots)
+    ])
+    n_nodes = len(nodes)
+    print("nodes?", nodes)
