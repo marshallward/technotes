@@ -4,15 +4,15 @@ from scipy.special import cosdg
 import matplotlib.pyplot as plt
 import itertools
 
-# Construct a polynomial of order 3
-order = 7
+# Set polynomial order
+order = 8
 
-# For now, interpolate from the rescaled range [-0.5 ln(2), +0.5 ln(2)]
-# TODO: Someday, look into table lookup into a smaller range.
+# Interpolate from the rescaled range [-0.5 ln(2), +0.5 ln(2)]
+# TODO: Table lookup?
 bound = 0.5 * np.log(2.)
 
 # Config
-plot_all = False
+plot_all = True
 
 #---
 
@@ -39,33 +39,17 @@ x = np.linspace(-bound, bound, 20000)
 
 # Start the Remez minimax solver.
 for nr in range(20):
-    print(nr)
 
-    if nr > 0:
-        # Update the positions of the extrema if necessary
-        # Find the roots of the error function on a dense grid.
-        # TODO: Find a better method
-        roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
-        roots = np.insert(roots, 0, 0)
-        roots = np.append(roots, len(err))
-        print("roots?", roots)
-
-        # Now find the extrema in each segment
-        # TODO: Again, write our own algorithm
-        # TODO: Enforce minimum spacing if cond(R) is too high?
-        nodes = np.array([
-            x[l + np.abs(err[l:r]).argmax()]
-            for l, r in itertools.pairwise(roots)
-            if l != r
-        ])
-        n_nodes = len(nodes)
-        print("nodes?", nodes)
+    #-- construct the polynomial --#
 
     # Construct the matrix
     R = np.vander(nodes, N=n_nodes-1, increasing=True)
     # TODO: Better way to do this?
     R = np.append(R, [[(-1)**k] for k in range(n_nodes)], axis=1)
+
+    # Use numpy precision
     f = np.exp(nodes)
+
     coeff = np.linalg.solve(R, f)
 
     # And build the polynomial
@@ -73,20 +57,26 @@ for nr in range(20):
 
     err = np.exp(x) - mm_poly(x)
 
-    if plot_all:
-        # Plot the first estimate
-        plt.plot(x, err)
-        plt.hlines(y=[coeff[-1], -coeff[-1]], xmin=-bound, xmax=bound)
-        plt.title(f"Max Error={np.max(err)}, dE={abs(coeff[-1] - np.max(err))}")
-        plt.show()
+    #-- check for convergence --#
 
     # Hard condition
     abs_err_bound = np.all(err < coeff[-1])
 
     # Soft condition: error is within 1ulp (I think?)
     # TODO: Prob not handling this correctly...
-    soft_err_bound = abs(np.max(err) - coeff[-1]) < 2**-53
+    soft_err_bound = abs(np.max(err)) - abs(coeff[-1]) < 2**-53
 
+    # What we really want: abs(np.max(err) < 2**53)
+    # but I doubt we're anywhere near that...
+
+    if plot_all:
+        # Plot the first estimate
+        plt.plot(x, err)
+        plt.hlines(y=[coeff[-1], -coeff[-1]], xmin=-bound, xmax=bound)
+        plt.title(f"Max Error={np.max(err)}, dE={abs(coeff[-1]) - abs(np.max(err))}")
+        plt.show()
+
+    # If we've converged, then we're done.
     if abs_err_bound or soft_err_bound:
         if not plot_all:
             # Plot the first estimate
@@ -96,3 +86,26 @@ for nr in range(20):
             plt.show()
 
         break
+
+    #-- update nodes --#
+
+    # Update the positions of the extrema if necessary
+    # Find the roots of the error function on a dense grid.
+    # TODO: Find a better method
+    roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
+    if roots[0] != 0:
+        roots = np.insert(roots, 0, 0)
+    roots = np.append(roots, len(err))
+    print("roots?", roots)
+
+    # Now find the extrema in each segment
+    # TODO: Again, write our own algorithm
+    # TODO: Enforce minimum spacing if cond(R) is too high?
+    nodes = np.array([
+        x[l + np.abs(err[l:r]).argmax()]
+        for l, r in itertools.pairwise(roots)
+        if l != r
+    ])
+
+    n_nodes = len(nodes)
+    print("nodes?", nodes)
