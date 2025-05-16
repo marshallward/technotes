@@ -4,8 +4,10 @@ from scipy.special import cosdg
 import matplotlib.pyplot as plt
 import itertools
 
+import gmpy2
+
 # Set polynomial order
-order = 8
+order = 7
 
 # Interpolate from the rescaled range [-0.5 ln(2), +0.5 ln(2)]
 # TODO: Table lookup?
@@ -13,6 +15,9 @@ bound = 0.5 * np.log(2.)
 
 # Config
 plot_all = True
+np.set_printoptions(precision=17, suppress=False)
+gmpy2.get_context().precision = 113
+
 
 #---
 
@@ -35,7 +40,9 @@ print(nodes)
 
 
 #---
-x = np.linspace(-bound, bound, 20000)
+x = np.linspace(-bound, bound, 10000)
+
+e128 = [gmpy2.exp(y) for y in x]
 
 # Start the Remez minimax solver.
 for nr in range(20):
@@ -55,7 +62,10 @@ for nr in range(20):
     # And build the polynomial
     mm_poly = Polynomial(coeff[:-1])
 
-    err = np.exp(x) - mm_poly(x)
+    # Compute error relative to high-precision exp()
+    # NOTE: Yes, this needs a "reference" function...
+    #   This is approximation theory, not root finding!
+    err = np.array([float(gmpy2.exp(y) - mm_poly(y)) for y in x])
 
     #-- check for convergence --#
 
@@ -85,6 +95,7 @@ for nr in range(20):
             plt.title(f"Max Error={np.max(err)}, dE={abs(coeff[-1] - np.max(err))}")
             plt.show()
 
+        print(mm_poly)
         break
 
     #-- update nodes --#

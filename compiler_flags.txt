@@ -1,0 +1,160 @@
+======================
+Compiler Optimizations
+======================
+
+Most compilers provide similar features to ensure optimization.  This document
+attempts to summarize the most common.
+
+
+General optimization
+--------------------
+
+``-O1``, ``-O2``, ...
+   Compilers generally provide multiple levels of optimization, but the meaning
+   differs between compilers.  Intels's ``-O2`` will usually enable
+   vectorization, but GCC will not turn this on until ``-O3``.
+
+   Even for a particular compiler, optimization levels may differ in meaning.
+   For GCC, ``-O2`` may be more aggressive on one architecture versus another,
+   or it may have access to libraries which target that architecture.
+
+``-Ofast``
+   This will do everything, but often will break your code.  Not that it won't
+   run (well not usually), but it will break language standards compilance.
+   Parentheses may be ignored, FMAs may be inserted which would violate
+   parentheses.  Math substitutions will be applied which you may not want.
+   That sort of thing.
+
+   It also does ``-fstack-arrays`` in Fortran, though we usually just assume
+   that could happen anyway...
+
+``-march=<architecture>``
+   Tells the compiler to target a particular architecture or instruction set.
+
+   Some compilers will lean towards a more generic portable build, which may
+   exclude certain newer features such as FMAs or AVX512.  Targeting the
+   architecture tells it to use all of its features.
+
+   Sometimes ``-march=native`` or something will use the local machine.
+
+``-mavx``, ``-mfma``, ...
+   Enable certain well-known optimizations, such as AVX vectorization or FMA
+   instructions.  ``-march=`` should set these for you, but this is useful to
+   investigate the impact of a particular feature.
+
+There are a *lot* of ``-m`` "machine" flags.  ``-mtune=...`` targets a
+particular architecture.  But usually good to avoid getting too weird here.
+
+``-flto``
+   Link-time optimization (LTO).  This allows multiple compiled object files to
+   be linked as if they were under a single translation unit.
+
+   Sounds awesome, but I have yet to really figure out how to use it
+   effectively.  But it's probably me.
+
+
+(There is a flag to enable "streaming" instructions, which move data directly
+from RAM to register.  Generally a bad idea but they are the only way to get
+close to peak RAM bandwidth...)
+
+
+Intel-specific
+--------------
+
+Intel is fast, so it's always going to be an important topic in performance.
+
+``-xsse``, ``-xavx``, ``-xHost``
+   The Intel "x" flags are slightly different in meaning.  I think they target
+   the actual hardware rather than the instruction set.  It might affect
+   certain Intel vs AMD optimizations.  But it can also break your executable
+   if the feature is not available.  Sometimes not a great idea.
+
+   (Come back to this one...)
+
+``-qopt-report[=5]``
+   The optimization report (previously vector report) tells you everything
+   wrong with your code.  Run this and read the output, and you will come
+   across as a very smart person.  (You also might want to fix your code.)
+
+``-qno-opt-dynamic-align`` (or something like that)
+   One of Intel's priorities is to align content in memory, in order to ensure
+   vectorization over the entire array.  This can change answers, so you may
+   want to turn it off.
+
+
+Non-performance flags
+---------------------
+
+These do not target optimization, but it's important to understand how they
+interact with optimizations.
+
+``-g``
+   Generate symbols for debugging.  This does not impact performance, so it is
+   almost always a good reason to include it.  (The main reason to exclude it
+   is to reduce executable size.)
+
+``-Og``
+   In GCC, this indicates optimization with full debugging.  This will not
+   change the meaning of any symbol nor make any optimizations that would
+   prevent debugging.
+
+``-S``
+   Generate assembly output.  Learn to inspect assembly!  You don't need to
+   understand it to detect certain performance issues.
+
+   Also see ``-fverbose-asm`` for readability!
+
+``-fno-omit-frame-pointer``
+   A pretty obscure optimization, but important for monitoring performance.
+
+   ``-fomit-frame-pointer`` will omit the frame pointer in a function if it's
+   not necessary.  Removing frame pointer setup makes it quicker to call, and
+   also frees up $fp for use in other optimizations.
+
+   However, $fp is often a crucial tool for tracking the current function and
+   building a call tree during debugging and performance.  So you're often just
+   better off disabling it.
+
+``-std=...``
+   Select a particular language standard.  This is more useful for targeting
+   newer features of a language, and the optimizations that come with it.
+
+   Generally you don't want to use bleeding edge features, but they can be
+   useful for testing.
+
+``-fno-builtin``
+   More of an anti-optimization, but this will force compilers to avoid builtin
+   functions that might be predefined as, for example, assembly calls.
+
+
+Nothing to do with optimization
+-------------------------------
+
+``-Wall``, ``-Wextra``, ``-[W]pedantic``, ...
+   Warnings!!  Some are very dumb though.
+
+``-fPIC``
+   Position-independent code.  This is for compiling shared libraries (as
+   opposed to static).  (Also see ``-shared``.  And ``-fPIE``; I still don't
+   know the difference...)
+
+``--coverage``
+   Generate .gcda (or is it .gcdo) files for coverage reports.  ``gcov`` is
+   very GNU but it is also a great tool for measuring coverage inside of an
+   object code.  You'll even find things that you had no idea were in your
+   programs!
+
+``--fsanitize=..``
+   I have not gotten into this one, but it's hardcore static analysis.
+
+``-Wl,<...>``
+   Pass a flag onto the linker.  Yes, it's a different program!
+
+``-I<...>``, ``-L<..>``
+   Your include and library directories.  If you are setting these then you
+   should think about configuring your environment.  (If not modules or spack,
+   then ``CPATH``, ``RPATH``, and things like that.)
+
+``-frecord-gcc-switches``
+   Save your flags into the executable!  Not always easy to flush it out but
+   ``strings <exec>`` can usually find it.
