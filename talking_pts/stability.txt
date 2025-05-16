@@ -1,0 +1,18 @@
+How do you handle numerical stability in large-scale computations? Are there
+specific tools or practices you use to detect and mitigate instability?
+
+* In our field, stability is mostly based on timestep
+
+  We have timestep controls and also detect instability
+
+* We also require <10-8 precision in some operations
+  
+  * physical argument
+  * remapping operation!
+
+  Numerical noise must be eliminated!
+
+  Expressions are carefully parenthesized to ensure value is preserved
+
+* We do fixed-precision summation for global metrics, accuracy is cited as 1 in
+  10^40. (Actual number depends on # of bins and bits etc)

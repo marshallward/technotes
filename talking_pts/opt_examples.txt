@@ -1,0 +1,65 @@
+Discuss a project where you optimized numerical computations for performance.
+What strategies did you employ to enhance efficiency on CPU and GPU
+architectures?
+
+vectorization of many MOM6 subroutines
+
+  * Identified static if() blocks inside of do-loops, which prevented
+    vectorization.
+
+  * Moving outward improved function performance 2-3x of production models
+
+  * Including techniques to close the gap between Intel and AMD
+    (usually workaround for mask instructions)
+
+Cuberoot implementation
+
+  * Bit repro required us to implement our own 
+
+  * I improved the performance of the first draft::
+
+    Timings (s) (16M array, -O3 -mavx -mfma)
+
+    | Solver              |  -O2  |  -O3  |
+    |---------------------|-------|-------|
+    | GNU x**1/3          | 0.225 | 0.198 |
+    | GNU cuberoot before | 0.418 | 0.412 |
+    | GNU cuberoot after  | 0.208 | 0.187 |
+
+    | Intel x**1/3        | 0.068 | 0.067 |
+    | Intel before        | 0.514 | 0.507 |
+    | Intel after         | 0.213 | 0.189 |
+
+  * Extensive iteration over combinations of Halley, Newton, and eventually
+    implementation of an FMA-favorable form which corrected the final bit.
+
+  * We even got a exactly-rounded version, but did not make final commit :(
+
+Subrounoff trick
+
+* sometimes we can do f(x) / (x + eps) if we know that f(x)/x is finite (or
+  zero) at zero.  the subroundoff lets us divide by zero
+
+Usual stuff
+
+* dont double-divide, etc
+
+MPI
+
+* Solved major scaling bottleneck in Australia MOM5 model
+  Identified all-to-all as point-to-point which was bringing down the machine!
+
+  Replaced with MPI_Alltoall intrinsic, moved problem to fabric and solved the
+  scaling block: from <500 CPUs to >40k (max machine).
+
+  * Additional speedups
+
+    * Introduced MPI datatypes to improve data transfers (TODO?)
+
+* Parallel netcdf implementation in GFDL FMS library, 80x speedup of
+  single-file IO.
+
+* (Minor) replaced manual bitcounts with intrinsics (popcnt)
+  >10x speedup of debugging runs
+
+
