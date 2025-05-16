@@ -1,0 +1,58 @@
+Can you describe your experience designing Python APIs for mathematical
+libraries? How do you ensure they are intuitive and align with Pythonic
+principles?
+
+* My numerical work has predominantly been on the Fortran side.
+
+* Some C for benchmarking, but not production work.
+
+* Python is largely a pre/post processing tool in model support
+
+* We are regular numpy/xarray users but typically for end-point work
+  (publication etc)
+
+  (I should also admit I am not an xarray user...)
+
+f90ml:
+
+* Fortran namelist parser
+  (has evolved into a namelist generator)
+
+  API comments?
+
+  * Focus on the API: the Parser accepts files as paths, streams, etc
+
+  * __init__() defines a top-level API for users/scripts
+
+  * Returns a Namelist object with its own
+
+  * Emphasize __dunder__() operations, emulate the dict() as closely as
+    possible.
+
+    * override dict() methods where necessary
+
+  * type safety for the Namelist() object
+
+    * using decorators
+
+  * Conditional (optional?) support for Numpy arrays
+    (Closest I get to a numerical API I suppose...)
+
+  * Emphasis on standard library
+
+  * Strong support for legacy and modern Python
+
+  * PEP8 and PEP257 compliant
+
+I also developed payu, a climate model workflow manager used with
+It started as an API for script generation, but the command line ended up being
+too popular, and the API has probably slipped a bit.
+
+* Interesting things in payu?
+
+Other projects of significance:
+* ropes: string-like data type with Pythonic API
+
+* flint: Fortran source parser, somewhat of a linter
+
+* payu: scheduler

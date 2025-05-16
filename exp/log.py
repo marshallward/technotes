@@ -122,4 +122,4 @@ for nr in range(20):
     print("nodes?", nodes)
 
 # Reached end of iteration, just print what we got
-print(mm_poly)
+#print(mm_poly)

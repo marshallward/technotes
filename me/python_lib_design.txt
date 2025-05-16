@@ -1,0 +1,28 @@
+How would you approach integrating a newly developed math API into existing
+Python frameworks like NumPy or SciPy? What challenges might arise, and how
+would you address them?
+
+* Accept the NumPy ndarray as the standard input^
+
+  * Possibly accept lists that map onto np.array(list)?  If so then also
+    support properties like dtype
+
+* Follow the intrinsic __dunder__() functions, esp __array_ufunc__()
+
+  * elemental functions use __array_ufunc__()
+
+    * reduce(), accumulate(), ....
+
+* avoid the in-place manipulation, e.g. x = a[:] vs x[:] = a[:]
+
+* Support arbitrary functions
+
+* Usual NumPy performance considerations:
+
+  * Use array operations as much as possible (no loops)
+
+    * esp. broadcasting rules and more exotic slice operations
+
+  * Use numpy intrinsics/elementals ("ufuncs")
+
+
