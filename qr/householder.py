@@ -1,24 +1,29 @@
 import numpy as np
 
-debug = False
+debug = True
 
 # Householder implementation of Q R factorization
 
 print("A = ")
-A = np.random.rand(4,4)
+A = np.random.rand(8,4)
 print(A)
+
+clen = A.shape[0]
+ncols = A.shape[1]
+print("number of columns:", ncols)
+print("column length:", clen)
 
 # R is not yet triangular, but it will be!
 R = np.array(A)
-Q = np.eye(*A.shape)
+Q = np.eye(clen)
 
-ncols = A.shape[1]
-x = np.zeros(ncols)
-e = np.zeros(ncols)
-v = np.zeros(ncols)
+x = np.zeros(clen)
+e = np.zeros(clen)
+v = np.zeros(clen)
 
-# What's up with the final iteration?  Sometimes the matrix blows up
-for c in range(ncols-1):
+niter = ncols - 1 + (ncols < clen)
+
+for c in range(niter):
     # Copy the next column vector of the submatrix into x
     x[:c] = 0.
     x[c:] = R[c:,c]
@@ -39,7 +44,7 @@ for c in range(ncols-1):
     v = v / np.linalg.norm(v)
 
     # Construct the Householder reflection operation Hx = x - 2 <x.v> v
-    H = np.eye(*R.shape) - 2. * np.outer(v, v)
+    H = np.eye(clen) - 2. * np.outer(v, v)
 
     # Update Q and R
     #   R is now "more" triangular, and another H is applied to Q.
@@ -57,5 +62,6 @@ for c in range(ncols-1):
 
 # And check the result:
 print("Is Q orthogonal?", np.allclose(Q.T @ Q, np.eye(*Q.shape), atol=1e-15))
-print("Is R upper triangular?", np.all(np.tril(R,k=-1) < 1e-15))
+print("Is R upper triangular?")
+print(abs(R) > 1e-15)
 print("Does A = QR?", np.allclose(Q @ R, A, atol=1e-15))
