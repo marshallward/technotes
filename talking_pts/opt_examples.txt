@@ -3,6 +3,7 @@ What strategies did you employ to enhance efficiency on CPU and GPU
 architectures?
 
 vectorization of many MOM6 subroutines
+--------------------------------------
 
   * Identified static if() blocks inside of do-loops, which prevented
     vectorization.
@@ -12,7 +13,37 @@ vectorization of many MOM6 subroutines
   * Including techniques to close the gap between Intel and AMD
     (usually workaround for mask instructions)
 
+
+ANN performance
+---------------
+
+Investigated multiple implementations of an ANN in MOM6.
+
+Ran performance test on each version, concluded that there was no need for
+custom functions and one was clearly optimal.
+
+Cruicial observations:
+
+* Many were doing in-place summation across the inner loop, this was
+  preventing pipelined parallelization within the CPU.
+
+  do i:
+    do o:
+      do s:
+         y(s,o) = y(o,s) + A(i,o) x(i) 
+
+  Parallel (in-core) sums of s were optimal
+
+
+vertvisc
+--------
+
+Implementation was jki for A(ijk) arrays ...
+
+
+
 Cuberoot implementation
+-----------------------
 
   * Bit repro required us to implement our own 
 
@@ -35,16 +66,22 @@ Cuberoot implementation
 
   * We even got a exactly-rounded version, but did not make final commit :(
 
+
 Subrounoff trick
+----------------
 
 * sometimes we can do f(x) / (x + eps) if we know that f(x)/x is finite (or
   zero) at zero.  the subroundoff lets us divide by zero
 
+
 Usual stuff
+-----------
 
 * dont double-divide, etc
 
+
 MPI
+---
 
 * Solved major scaling bottleneck in Australia MOM5 model
   Identified all-to-all as point-to-point which was bringing down the machine!
