@@ -1,0 +1,96 @@
+=========================
+Thomas Tridiagonal Solver
+=========================
+
+Solve a system of equations of the form
+
+.. math::
+
+   b_1 x_1 + c_1 x_2                   & = d_1 \\
+   a_2 x_1 + b_2 x_2 + c_2 x_3         & = d_2 \\
+   \vdots \\
+   a_i x_{i-1} + b_i x_i + c_i x_{i+1} & = d_i \\
+   \vdots \\
+   a_n x_{n-1} + b_n x_n               & = d_n \\
+
+:math:`x_1` can be expressed in terms of :math:`x_2`, which can be used in the
+next expression to construct an expression for :math:`x_3`, and so on.
+Successive expressions of :math:`x_i` into :math:`x_{i+1}` will eventually
+terminate at :math:`x_n`, allowing for a backsubstitution through to
+:math:`x_1`, solving the system.
+
+The procedure become more clear after multiplying the first two expressions by
+:math:`a_2` and :math:`b_1`, respectively.
+
+.. math::
+
+   b_1 a_2 x_1 + c_1 a_2 x_2               & = d_1 a_2 \\
+   b_1 a_2 x_1 + b_1 b_2 x_2 + b_1 c_2 x_3 & = b_1 d_2 \\
+   \\
+   \Rightarrow
+      (b_1 b_2 - c_1 a_2) x_2 + (b_1 c_2) x_3 & = (b_1 d_2 - d_1 a_2) \\
+   \Rightarrow
+      \tilde{a}_2 x_1 + \tilde{b}_2 x_2 + \tilde{c}_2 x_3 & = \tilde{d}_2 \\
+
+where
+
+.. math::
+
+   \tilde{a}_2 &= 0 \\
+   \tilde{b}_2 &= b_1 b_2 - c_1 a_2 \\
+   \tilde{c}_2 &= b_1 c_2 \\
+   \tilde{d}_2 &= b_1 d_2 - d_1 a_2.
+
+Now consider an induction-like argument where :math:`\tilde{a}_{i-1} = 0`, the
+other coefficients :math:`\tilde{b}_{i-1}`, :math:`\tilde{c}_{i-1}`, and
+:math:`\tilde{d}_{i-1}` are known, and apply this method to the next expression
+:math:`a_i x_{i-1} + b_i x_i + c_i x_{i+1} = d_i`.
+
+.. math::
+
+   \tilde{b}_{i-1} a_i x_{i-1} + \tilde{c}_{i-1} a_i x_i
+      &= \tilde{d}_{i-1} a_i \\
+   \tilde{b}_{i-1} a_i x_{i-1} + \tilde{b}_{i-1} b_i x_i
+      + \tilde{b}_{i-1} c_i x_{i+1} &= \tilde{b}_{i-1} d_i \\
+   \\
+   \Rightarrow 
+      (\tilde{b}_{i-1} b_i - \tilde{c}_{i-1} a_i) x_i
+      + \tilde{b}_{i-1} c_i x_{i+1}
+      & = (\tilde{b}_{i-1} d_i - \tilde{d}_{i-1} a_i)
+
+From this, define the next iteration of coeffients.
+
+.. math::
+
+   \tilde{a}_i &= 0 \\
+   \tilde{b}_i &= \tilde{b}_{i-1} b_i - \tilde{c}_{i-1} a_i \\
+   \tilde{c}_i &= \tilde{b}_{i-1} c_i \\
+   \tilde{d}_i &= \tilde{b}_{i-1} d_i - \tilde{d}_{i-1} a_i
+
+This is the main result of the algorithm.  The transformed coordinates present
+an upper triangular system of equations with a clear method of evaluation.
+
+.. math::
+
+   \tilde{b}_{i} x_i + \tilde{c}_i x_{i+1} &= \tilde{d}_i & i = 1, n-1 \\
+   \tilde{b}_n x_n &= \tilde{d}_n
+
+The algorithm is as follows:
+
+1. Construct the coefficient arrays :math:`\tilde{b}_i`, :math:`\tilde{c}_i`,
+   :math:`\tilde{d}_i` from 1 to n.
+
+2. Then backtrack from n to 1 and evaluate :math:`x_i`.
+
+
+Schopf and Loughe Method
+------------------------
+
+This preserves accuracy due to floating point error.  (TODO)
+
+
+Pivoting
+--------
+
+How to deal with zeros in :math:`b_i`?
+
