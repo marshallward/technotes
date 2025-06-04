@@ -85,3 +85,48 @@ Pade approximants are too computationally expensive.  The common choice is the
 *minimax polynomial*, built by the *Remez algorithm* from *Chebyshev nodes*.
 
 
+Chebyshev nodes
+---------------
+
+TODO (not necessary but a good starting point)
+
+
+Remez Algorithm
+===============
+
+This algorithm constructs the polynomial which minimizes the maximum
+absolute difference (i.e. the :math:`\infty`-norm).  It is based on the
+*equioscillation theorem*.
+
+   If :math:`f` is a continuous function over :math:`[a,b]` and :math:`g` is a
+   polynomial of degree :math:`n`, then :math:`g` minimizes the *uniform norm*
+   :math:`\lVert f - g \rVert_\infty` if and only if there are
+   :math:`n+2` points :math:`a \le x_0 < x_1 < \cdots < x_{n+1} \le b` such
+   that :math:`f(x_i) - g(x_i) = \sigma (-1)^i \lVert f - g \rVert_\infty`
+   where :math:`\sigma` is either :math:`+1` or :math:`-1`.
+
+In other words, the optimal polynomial (in an :math:`\infty`-norm sense) is one
+where the error oscillates between the maximum error.  Not going to prove it,
+but this is the general idea.
+
+* A polynomial of degree :math:`n` oscillates at most :math:`n` times.  Add two
+  end points (which may or may not be :math:`a` and :math:`b`), and you get
+  :math:`n+2` extrema from some desired curve.
+  
+* Any reduction of error in one extrema increases the error in the other
+  extrema.  The only way to get a true minimum over all extrema is to equalize
+  the error over these points.
+
+We therefore seek a polynomial :math:`g(x)` with oscillating error :math:`\pm
+E` at :math:`n+2` points :math:`x_i` from :math:`a` to :math:`b`.
+
+.. math::
+
+   a_0 + a_1 x_0 + a_2 x_0^2 + \ldots + a_n x_0^{n} + E &= f(x_0) \\
+   a_0 + a_1 x_1 + a_2 x_1^2 + \ldots + a_n x_1^{n} - E &= f(x_1) \\
+   a_0 + a_1 x_2 + a_2 x_2^2 + \ldots + a_n x_2^{n} + E &= f(x_2) \\
+   a_0 + a_1 x_3 + a_2 x_3^2 + \ldots + a_n x_3^{n} - E &= f(x_3) \\
+   \ldots \\
+   a_0 + a_1 x_{n+1} + a_2 x_{n+1}^2 + \ldots + a_n x_{n+1}^{n} \pm E &= f(x_{n+1}) \\
+
+Test
