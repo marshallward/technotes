@@ -7,7 +7,7 @@ import itertools
 import gmpy2
 
 # Set polynomial order
-order = 7
+order = 8
 
 # Interpolate from the rescaled range [-0.5 ln(2), +0.5 ln(2)]
 # TODO: Table lookup?
@@ -59,13 +59,17 @@ for nr in range(20):
 
     coeff = np.linalg.solve(R, f)
 
+    # Round each coefficient to target precision
+    rounded_coeff = np.array([float(gmpy2.next_below(gmpy2.next_above(c)))
+            for c in coeff[:-1]])
+
     # And build the polynomial
     mm_poly = Polynomial(coeff[:-1])
+    mm_poly_rounded = Polynomial(rounded_coeff)
 
     # Compute error relative to high-precision exp()
-    # NOTE: Yes, this needs a "reference" function...
-    #   This is approximation theory, not root finding!
-    err = np.array([float(gmpy2.exp(y) - mm_poly(y)) for y in x])
+    #err = np.array([float(gmpy2.exp(y) - mm_poly(y)) for y in x])
+    err = np.array([float(gmpy2.exp(y) - mm_poly_rounded(y)) for y in x])
 
     #-- check for convergence --#
 
@@ -85,6 +89,7 @@ for nr in range(20):
         plt.hlines(y=[coeff[-1], -coeff[-1]], xmin=-bound, xmax=bound)
         plt.title(f"Max Error={np.max(err)}, dE={abs(coeff[-1]) - abs(np.max(err))}")
         plt.show()
+        plt.savefig(f'out_{nr}.png')
 
     # If we've converged, then we're done.
     if abs_err_bound or soft_err_bound:
@@ -94,6 +99,7 @@ for nr in range(20):
             plt.hlines(y=[coeff[-1], -coeff[-1]], xmin=-bound, xmax=bound)
             plt.title(f"Max Error={np.max(err)}, dE={abs(coeff[-1] - np.max(err))}")
             plt.show()
+            plt.savefig(f'out_{nr}.png')
 
         print(mm_poly)
         break
@@ -120,3 +126,9 @@ for nr in range(20):
 
     n_nodes = len(nodes)
     print("nodes?", nodes)
+
+# Show the quality of the fit?
+plt.close()
+plt.plot(x, np.exp(x))
+plt.plot(x, mm_poly(x))
+plt.savefig('exp.png')
