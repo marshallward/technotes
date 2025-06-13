@@ -1,0 +1,6 @@
+===============
+Sterbenz' Lemma
+===============
+
+Sterbenz' Lemma says that the substraction of any two floating point numbers is
+also a floating point number, if subnormal numbers are included.
