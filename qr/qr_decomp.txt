@@ -142,8 +142,8 @@ For a generic matrix :math:`A_{m,n}`, the decomposition is
    A_{m,n} = Q_{m,m} \times R_{m,n}.
 
 The number of orthonormal column vectors :math:`\mathbf{q}` matches the number
-of *rows* of :math:`A`.  The orthogonal space defined by :math:`Q` may be
-either larger or smaller than the solution(s) to A.
+of rows of :math:`A`.  The orthogonal space defined by :math:`Q` may be either
+larger or smaller than the solution(s) to A.
 
 The deterministic case (:math:`m = n`) is relatively straightforward.
 :math:`R` is exactly tridiagonal.
@@ -169,6 +169,8 @@ instead minimizes :math:`\|A\mathbf{x} - \mathbf{b}\|_2`.
 solutions.  When these occur, one may seek some norm-based minimum
 :math:`\|\mathbf{x}\|` to the problem.
 
+There are inherent issues with an undetermined QR decomposition.
+
 * :math:`R` is *upper trapezoidal*, with the final row having multiple values.
   Back substitution is not possible, and the matrix is not meaningfully
   invertible.
@@ -176,17 +178,66 @@ solutions.  When these occur, one may seek some norm-based minimum
 * The columns of :math:`Q` only span :math:`\mathbb{R}^m`, which is smaller
   than the space of :math:`\mathbf{x}`.
 
-The usual way to handle this is to instead decompose :math:`A^T`, which is
-typically good enough to solve :math:`\min \|\mathbf{x}\|`.  (I don't think I
-want to worry about it otherwise.)
+In other words, the QR decomposition does not help to solve :math:`A \mathbf{x}
+= \mathbf{b}`.
+
+One approach to undetermined systems is to instead decompose :math:`A^T`, which
+can be solved by QR-decomposition, and whose solution can solve :math:`\min
+\|\mathbf{x}\|`.  (But this is another topic...)
 
 
 How does QR decomposition differ from LU decomposition?
 -------------------------------------------------------
 
+A lot of this needs more context than has been written up yet.  But...
+
+* QR is more expensive:
+
+  * LU is :math:`\frac{2}{3} n^3`
+
+  * QR is (typically) :math:`2 m n^2 - \frac{2}{3} n^3`, or :math:`\frac{4}{3}
+    n^3`.
+
+  For square matrics, QR is about 2x the cost of LU.
+
+* QR is generally more *stable*
+
+  * If :math:`A` is rank-deficit, it is handled naturally in QR: you end up
+    with a row of zeros in :math:`R`.
+
+    LU needs some method to detect and pivot around it.
+
+  * :math:`Q` has a condition number of 1, so it's never a problem.
+
+    Good luck with LU!
+
+* QR works in *nondeterminate systems*
+
+  * Overdetermined least-squares data fitting
+
+  * Underdetermined solutions to :math:`\min \| A\mathbf{x} - \mathbf{b} \|`
+    (by decomposition of :math:`A^T`).
+
+Summary:
+
+   QR is more expensive, but it is also more stable and overall useful over a
+   wider number of applications.
+
 
 Can all matrices be decomposed using QR?
 ----------------------------------------
+
+Yes, although this is more a procedural fact.
+
+* One can generate an orthonormal vector set from any set of column vectors.
+  In this case, it is the column vectors of :math:`A`.
+
+* QR-decomposition is an iterative change-of-basis which work over iteratively
+  smaller segments of :math:`A`, eventually producing :math:`R`.
+
+But this is just describing the various algorithms for decomposition.
+
+(There is probably more to say here, though)
 
 
 Conceptual & Theoretical
