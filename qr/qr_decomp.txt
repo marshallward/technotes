@@ -8,7 +8,7 @@ Basic Understanding
 What is QR decomposition?
 -------------------------
 
-Any matrix :math:`A` can be decomposed as a product of an *orthonormal matrix*
+Any matrix :math:`A` can be decomposed as a product of an *orthogonal matrix*
 :math:`Q` and an upper triangular matrix :math:`R`.
 
 .. math::
@@ -16,10 +16,10 @@ Any matrix :math:`A` can be decomposed as a product of an *orthonormal matrix*
    A = Q R
 
 
-...and what is an orthonormal matrix?
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+and what is an orthogonal matrix?
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-:math:`Q` is *orthonormal* if it preserves dot products after vector
+:math:`Q` is *orthogonal* if it preserves dot products after vector
 transformation.  That is,
 
 .. math::
@@ -50,7 +50,8 @@ The most common example of an orthogonal matrix is the rotation matrix,
       -\sin \theta & \cos \theta
    \end{pmatrix}
 
-which rotates a vector by angle :math:`\theta`.
+which rotates a vector by angle :math:`\theta`.  (Almost universally written as
+:math:`R`; no relation to the upper triangular matrix above.)
 
 Another is the reflection matrix,
 
@@ -83,28 +84,28 @@ of its column vectors.  If :math:`Q = ( \mathbf{q}_1, \mathbf{q}_2,
          \mathbf{q}_1^T \mathbf{q}_1
          & \mathbf{q}_1^T \mathbf{q}_2
          & \mathbf{q}_1^T \mathbf{q}_3
-         \cdots \\
+         & \cdots \\[0.5em]
          \mathbf{q}_2^T \mathbf{q}_1
          & \mathbf{q}_2^T \mathbf{q}_2
          & \mathbf{q}_2^T \mathbf{q}_3
-         & \cdots \\
+         & \cdots \\[0.5em]
          \mathbf{q}_3^T \mathbf{q}_1
          & \mathbf{q}_3^T \mathbf{q}_2
          & \mathbf{q}_3^T \mathbf{q}_3
-         & \cdots \\
+         & \cdots \\[0.5em]
          \vdots & & & \ddots
       \end{pmatrix}
 
 Since :math:`Q^T Q = I`, it must be that :math:`\mathbf{q}_i^T \mathbf{q}_j =
-\delta_{ij}`.  That is, the column vectors of :math:`Q` form an orthogonal
-basis.
+\delta_{ij}`.  The column vectors of :math:`Q` form an orthogonal basis.
 
 
 Why would you do this?
 ----------------------
 
 If you know :math:`Q` and `R`, then you can solve systems of equations without
-calculating an inverse operator.
+calculating an inverse operator.  If you are trying to solve :math:`\mathbf{x}`
+in :math:`A \mathbf{x} = \mathbf{b}`, then
 
 .. math::
 
@@ -112,25 +113,72 @@ calculating an inverse operator.
 
    \Rightarrow R \mathbf{x} = Q^{-1} \mathbf{b} = Q^T \mathbf{b}
 
-Since :math:`R` is upper triangular, it's just *back substitution* to get
-:math:`\mathbf{x}`.
+Since :math:`R` is upper triangular, use *back substitution* to compute
+:math:`\mathbf{x}` from bottom to top.  (:math:`R^{-1}` is also an upper
+tridiagonal matrix.)
 
-(Nearly orthogonal decomposition is motivated by this result, e.g.
-:math:`e^{\pm ix}` in Fourier analysis.)
+.. fill the rest of this in properly
 
-Other uses (to be explained below)
+.. (Nearly orthogonal decomposition is motivated by this result, e.g.
+   :math:`e^{\pm ix}` in Fourier analysis.)
 
-* Solving an overdetermined system based on minimizing :math:`|Ax - b|`.
+.. Other uses (to be explained below)
 
-* Computing the eigenvalues of :math:`A` ("QR algorithm")
+.. * Solving an overdetermined system based on minimizing :math:`|Ax - b|`.
 
-* :math:`Q` provides a way to change the basis of :math:`\mathbf{x}` (although
-  I don't know how useful this is unless you have some control over :math:`Q`)
+.. * Computing the eigenvalues of :math:`A` ("QR algorithm")
 
+.. * :math:`Q` provides a way to change the basis of :math:`\mathbf{x}` (although
+   I don't know how useful this is unless you have some control over :math:`Q`)
 
 
 What is the shape of Q and R if the input matrix is m×n with m≥n?
 -----------------------------------------------------------------
+
+For a generic matrix :math:`A_{m,n}`, the decomposition is
+
+.. math::
+
+   A_{m,n} = Q_{m,m} \times R_{m,n}.
+
+The number of orthonormal column vectors :math:`\mathbf{q}` matches the number
+of *rows* of :math:`A`.  The orthogonal space defined by :math:`Q` may be
+either larger or smaller than the solution(s) to A.
+
+The deterministic case (:math:`m = n`) is relatively straightforward.
+:math:`R` is exactly tridiagonal.
+
+*Overdetermined* systems (:math:`m > n`) have more equations than variables,
+and have no solutions.  The canonical example is a least-squares fit, where one
+instead minimizes :math:`\|A\mathbf{x} - \mathbf{b}\|_2`.
+
+* The bottom rows of :math:`R` are filled with zeros.  We still describe
+  :math:`R` as upper triangular.  When we try to solve
+
+  .. math::
+
+     R \mathbf{x} = Q^T \mathbf{b},
+
+  the lower :math:`r` are :math:`q_{rk} b_k = 0`, which is in most cases a
+  contradiction.
+
+* The :math:`m` column vectors of :math:`Q` describe a space that is larger
+  than :math:`\mathbf{x}`.
+
+*Underdetermined* systems (:math:`m < n`) are "wide" and do not have unique
+solutions.  When these occur, one may seek some norm-based minimum
+:math:`\|\mathbf{x}\|` to the problem.
+
+* :math:`R` is *upper trapezoidal*, with the final row having multiple values.
+  Back substitution is not possible, and the matrix is not meaningfully
+  invertible.
+
+* The columns of :math:`Q` only span :math:`\mathbb{R}^m`, which is smaller
+  than the space of :math:`\mathbf{x}`.
+
+The usual way to handle this is to instead decompose :math:`A^T`, which is
+typically good enough to solve :math:`\min \|\mathbf{x}\|`.  (I don't think I
+want to worry about it otherwise.)
 
 
 How does QR decomposition differ from LU decomposition?
