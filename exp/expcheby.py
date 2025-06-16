@@ -1,5 +1,6 @@
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial.chebyshev import chebvander, Chebyshev
 from scipy.special import cosdg
 import matplotlib.pyplot as plt
 import itertools
@@ -7,7 +8,7 @@ import itertools
 import gmpy2
 
 # Set polynomial order
-order = 8
+order = 12
 
 # Interpolate from the rescaled range [-0.5 ln(2), +0.5 ln(2)]
 # TODO: Table lookup?
@@ -36,13 +37,13 @@ angles = np.linspace(0.5 * d_angle, 180. - 0.5 * d_angle, n_nodes)
 nodes = bound * cosdg(angles)
 
 # Check output
-print("initial nodes")
 print(nodes)
-print("Start Remez")
 
 
 #---
 x = np.linspace(-bound, bound, 10000)
+
+e128 = [gmpy2.exp(y) for y in x]
 
 # Start the Remez minimax solver.
 for nr in range(20):
@@ -50,7 +51,11 @@ for nr in range(20):
     #-- construct the polynomial --#
 
     # Construct the matrix
-    R = np.vander(nodes, N=n_nodes-1, increasing=True)
+    #R = np.vander(nodes, N=n_nodes-1, increasing=True)
+
+    scaled_nodes = nodes / bound
+    R = chebvander(scaled_nodes, deg=n_nodes-2) 
+
     # TODO: Better way to do this?
     R = np.append(R, [[(-1)**k] for k in range(n_nodes)], axis=1)
 
@@ -66,12 +71,13 @@ for nr in range(20):
     # And build the polynomial
     mm_poly = Polynomial(coeff[:-1])
     mm_poly_rounded = Polynomial(rounded_coeff)
+    #mm_poly_chebyshev = Chebyshev(rounded_coeff, domain=[-bound,bound])
+    mm_poly_chebyshev = Chebyshev(coeff[:-1], domain=[-bound,bound])
 
     # Compute error relative to high-precision exp()
     #err = np.array([float(gmpy2.exp(y) - mm_poly(y)) for y in x])
-    err = np.array([float(gmpy2.exp(y) - mm_poly_rounded(y)) for y in x])
-    print("error:")
-    print(err)
+    #err = np.array([float(gmpy2.exp(y) - mm_poly_rounded(y)) for y in x])
+    err = np.array([float(gmpy2.exp(y) - mm_poly_chebyshev(y)) for y in x])
 
     #-- check for convergence --#
 
@@ -131,6 +137,6 @@ for nr in range(20):
 
 # Show the quality of the fit?
 plt.close()
-plt.plot(x, np.exp(x))
-plt.plot(x, mm_poly(x))
-plt.savefig('exp.png')
+#plt.plot(x, np.exp(x))
+#plt.plot(x, mm_poly(x))
+#plt.savefig('exp.png')
