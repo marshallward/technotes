@@ -1,0 +1,82 @@
+=============================================
+Gaussian Elimination and the LU decomposition
+=============================================
+
+A general system of linear equations is solved by Gaussian elimination, and the
+procedure is encoded in the LU-decomposition of the matrix.
+
+
+Gaussian Elimination
+====================
+
+To solve a general system of linear equations, the most general method is to
+procedurally eliminate each term until left with a single variable.  For the
+following system of equations
+
+.. math::
+
+   a_{00} x_0 + a_{01} x_1 + a_{02} x_2 & = b_0 \\
+   a_{10} x_0 + a_{11} x_1 + a_{12} x_2 & = b_1 \\
+   a_{20} x_0 + a_{21} x_1 + a_{22} x_2 & = b_2,
+
+the first equation is used to eliminate :math:`x_0` in each of the subsequent
+equations.  The first equation is multiplied by a factor :math:`a_{i0} /
+a_{00}` and is then subtracted from the corresponding :math:`i`-th equation, so
+that
+
+.. math::
+
+   a_{00} x_0 + a_{01} x_1 + a_{02} x_2 = b_0 \\
+
+   a_{10} x_0 & + a_{11} x_1 + a_{12} x_2 \\
+   & - \frac{a_{10}}{a_{00}} (a_{00} x_0 + a_{01} x_1 + a_{02} x_2)
+      = b_1 - \frac{a_{10}}{a_{00}} b_0 \\
+   a_{20} x_0 & + a_{21} x_1 + a_{22} x_2 + a_{23} x_3 \\
+   & - \frac{a_{20}}{a_{00}} (a_{00} x_0 + a_{01} x_1 + a_{02} x_2)
+      = b_2 - \frac{a_{20}}{a_{00}} b_0. \\
+
+The first term cancels, and the system reduces to
+
+.. math::
+
+   a_{00} x_0 + a_{01} x_1 + a_{02} x_2 & = b_0 \\
+   \left(a_{11} - \frac{a_{10} a_{01}}{a_{00}}\right) x_1
+   + \left(a_{12} - \frac{a_{10} a_{02}}{a_{00}}\right) x_2 
+      & = b_1 - \frac{a_{10}}{a_{00}} b_0 \\
+   \left(a_{21} - \frac{a_{20} a_{01}}{a_{00}}\right) x_1
+   + \left(a_{22} - \frac{a_{20} a_{02}}{a_{00}}\right) x_2
+      & = b_2 - \frac{a_{20}}{a_{00}} b_0. \\
+
+The process is then repeated on the next column, starting from the second row.
+Eventually, one ends up with an upper triangular system of equations,
+
+.. math::
+
+   a_{00} x_0 + a_{01} x_1 + a_{02} x_2 & = b_0 \\
+   a'_{11} x_1 + a'_{12} x_2 & = b'_1 \\
+   a''_{22} x_2 & = b''_2
+
+which can be solved by *back substitution*; evaluate the final term
+:math:`x_2`, then use this to determine :math:`x_1` and finally :math:`x_0`.
+
+While the general procedure is easy enough to follow, it also requires
+manipulation of both the left and right side of the equations.  Since both
+manipulations are based on the left coefficients, it is possible to reconstruct
+the entire operation from a single matrix, as in :math:`A \mathbf{x} =
+\mathbf{b}`; that is,
+
+.. math::
+
+   \begin{pmatrix}
+      a_{00} & a_{01} & a_{02} \\
+      a_{10} & a_{11} & a_{12} \\
+      a_{20} & a_{21} & a_{22} \\
+   \end{pmatrix}
+   \begin{pmatrix} x_0 \\ x_1 \\ x_2 \end{pmatrix}
+   = 
+   \begin{pmatrix} b_0 \\ b_1 \\ b_2 \end{pmatrix}.
+
+The algorithm above can be encoded as matrix transforms applied to :math:`A`
+and :math:`b`.  From this, one can infer a decomposition :math:`A = LU` where
+:math:`L` is a lower triangular matrix and :math:`U` is an upper triangular
+matrix.

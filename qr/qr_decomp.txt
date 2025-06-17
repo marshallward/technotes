@@ -257,15 +257,33 @@ Explain the role of QR decomposition in solving least squares problems.
 Computational/Algorithmic
 =========================
 
-How do you compute QR decomposition using Gram-Schmidt?
+There are three main methods:
 
-What is the difference between classical and modified Gram-Schmidt?
+* Gram-Schmidt Orthogonalization
 
-Describe how Householder reflections are used in QR decomposition.
+* Householder reflection
 
-What are Givens rotations, and how are they applied in QR decomposition?
+* Gram rotation
 
-Which method is numerically more stable: Gram-Schmidt or Householder? Why?
+
+Householder method
+------------------
+
+This is probably the most common(?)
+
+
+Generic ChatGPT questions
+-------------------------
+
+* How do you compute QR decomposition using Gram-Schmidt?
+
+* What is the difference between classical and modified Gram-Schmidt?
+
+* Describe how Householder reflections are used in QR decomposition.
+
+* What are Givens rotations, and how are they applied in QR decomposition?
+
+* Which method is numerically more stable: Gram-Schmidt or Householder? Why?
 
 
 Applications
