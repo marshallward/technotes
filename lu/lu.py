@@ -5,12 +5,12 @@ import scipy
 #np.random.seed(0)
 #A = np.random.rand(4,4)
 
-## Textbook example
-#A = np.array([[2., 1., -1.], [-3., -1., 2.], [-2., 1., 2.]])
+# Textbook example
+A = np.array([[2., 1., -1.], [-3., -1., 2.], [-2., 1., 2.]])
 
-# A high condition number example
-#A = scipy.linalg.hilbert(8)
-A = scipy.linalg.hilbert(4)
+## A high condition number example
+##A = scipy.linalg.hilbert(8)
+#A = scipy.linalg.hilbert(4)
 
 ## A pivoting example
 #A = np.array([[2., 1., -1.], [4., 2., -2.], [-2., 1., 2.]])
@@ -58,10 +58,11 @@ for i in range(n-1):
         if i > 0:
             L[[i, pivot], :i] = L[[pivot, i], :i]
 
-    # The cancellation terms become the L matrix.
-    L[i+1:,i:i+1] = U[i+1:,i:i+1] / U[i,i]
+    # Apply M(i) to A to form U
+    # Note that M(i) = I - m e_i, and M-1 = I + m e_i
+    # So we complete column i by *addition* to L and *subtraction* from A
 
-    # Apply to E to make it upper triangular.
+    L[i+1:,i:i+1] = U[i+1:,i:i+1] / U[i,i]
     U[i+1:,:] = U[i+1:,:] - L[i+1:,i:i+1] * U[i:i+1,:]
 
 
@@ -76,7 +77,7 @@ print(P)
 
 # Check the answer
 
-if np.allclose(P @ L @ U, A):
+if np.allclose(P @ A, L @ U):
     print("P L U = A")
 else:
     print("ERROR! P L U /= A!")
