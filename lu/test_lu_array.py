@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import scipy
 
 from lu_array import LU
@@ -16,8 +17,10 @@ C = scipy.linalg.hilbert(4)
 # A pivoting example
 D = np.array([[2., 1., -1.], [4., 2., -2.], [-2., 1., 2.]])
 
-for M in A, B, C, D:
-#for M in (A,):
+# A PyTorch example
+T = torch.tensor([[4.0, 3.0], [6.0, 3.0]], dtype=torch.float64)
+
+for M in A, B, C, D, T:
     print("M = ")
     print(M)
 

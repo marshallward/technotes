@@ -1,2 +1,4 @@
 # Ignore all pdf docs
 *.pdf
+
+__pycache__/

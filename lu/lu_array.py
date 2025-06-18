@@ -1,20 +1,54 @@
 from array_api_compat import get_namespace
 
 def LU(A):
+    """
+    Perform LU decomposition with partial pivoting.
+
+    Parameters
+    ----------
+    A: array
+       Square 2D floating-point array object supporting the Python Array API.
+
+    Returns
+    -------
+    P: array
+       Permutation matrix such that P @ A = L @ U.
+    L: array
+       Lower triangular matrix with unit diagonal.
+    U: array
+       Upper triangular matrix.
+
+    Raises
+    ------
+    ValueError
+        If `A` is not a 2d square floating-point array or an array
+        API-compatible object.
+
+    Example
+    >>> import numpy as np
+    >>> from lu_array import LU
+    >>> A = np.array([[2, 3], [4, 5]], dtype=float)
+    >>> P, L, U = LU(A)
+    >>> np.allclose(P @ A, L @ U)
+    True
+    """
     try:
         ns = get_namespace(A)
     except TypeError:
         raise ValueError("Input is not a valid array type")
 
-    A_shape = ns.shape(A)
-    if len(A_shape) != 2 or A_shape[0] != A_shape[1]:
+    if not str(A.dtype).startswith("float"):
+        A = ns.astype(A, ns.float64)
+
+    if len(A.shape) != 2 or A.shape[0] != A.shape[1]:
         raise ValueError("Input must be a square 2D array")
 
-    n = A_shape[0]
+    n = A.shape[0]
 
-    U = ns.copy(A)
-    L = ns.eye(n)
-    P = ns.eye(n)
+    # ns.copy(A) is valid, but not yet supported in PyTorch
+    U = ns.astype(A, A.dtype, copy=True)
+    L = ns.eye(n, dtype=A.dtype)
+    P = ns.eye(n, dtype=A.dtype)
 
     for i in range(n-1):
         # Partial pivot to row by maximum diagonal
@@ -24,19 +58,19 @@ def LU(A):
         pivot = i + offset
 
         # Swap pivot row
-        if pivot != i and not ns.isclose(col[offset], col[0], atol=1e-12):
+        if pivot != i and abs(float(col[offset])) - abs(float(col[0])) > 1e-12:
 
             # NOTE: Array API does not require U[[i,pivot]] = U[[pivot, i]]
-            tmp = ns.copy(U[i])
+            tmp = ns.astype(U[i], U.dtype, copy=True)
             U[i] = U[pivot]
             U[pivot] = tmp
             
-            tmp = ns.copy(P[i])
+            tmp = ns.astype(P[i], P.dtype, copy=True)
             P[i] = P[pivot]
             P[pivot] = tmp
 
             if i > 0:
-                tmp = ns.copy(L[i, :i])
+                tmp = ns.astype(L[i, :i], L.dtype, copy=True)
                 L[i, :i] = L[pivot, :i]
                 L[pivot, :i] = tmp
 
