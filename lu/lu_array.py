@@ -82,14 +82,53 @@ def LU(A):
 
 
 def solve(A, b):
+    """
+    Solve Ax = b for 2D square matrix A and vector b.
+
+    Parameters
+    ----------
+    A: array
+       Square 2D floating-point array object supporting Python array API.
+    b: array
+       1D floating-point array object supporting the Python array API.
+
+    Returns
+    -------
+    x: array
+       1D floating-point array object which solves Ax = b.
+
+    Raises
+    ------
+    ValueError
+        If `A` is not a 2d square floating-point array or an array
+        API-compatible object.
+    Example
+    >>> import numpy as np
+    >>> from lu_array import solve
+    >>> A = np.array([[2, 3], [4, 5]], dtype=float)
+    >>> b = np.array([3, 3], dtype=float)
+    >>> solve(A, b)
+    [-3., 3.]
+    """
     try:
         ns = get_namespace(A)
     except TypeError:
-        raise ValueError("Input is not a valid array type")
+        raise ValueError("Matrix A is not a valid array type")
+
+    try:
+        get_namespace(b)
+    except TypeError:
+        raise ValueError("Vector b is not a valid array type")
 
     P, L, U = LU(A)
 
     n = A.shape[0]
+
+    # Adjust shape of b if necessary
+    # NOTE: This does not change the view of b outside of solve().
+    b = ns.reshape(b, (n,))
+
+    # Allocate the solution
     x = ns.empty(n)
 
     # Apply pivot
