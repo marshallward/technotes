@@ -33,10 +33,10 @@ for M in A, B, C, D, T:
     print(L)
     print("P = ")
     print(P)
-    
-    
+
+
     # Check the answer
-    
+
     if np.allclose(P @ M, L @ U):
         print("P M = L U")
     else:
