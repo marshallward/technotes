@@ -64,7 +64,7 @@ def LU(A):
             tmp = ns.astype(U[i], U.dtype, copy=True)
             U[i] = U[pivot]
             U[pivot] = tmp
-            
+
             tmp = ns.astype(P[i], P.dtype, copy=True)
             P[i] = P[pivot]
             P[pivot] = tmp
@@ -79,3 +79,30 @@ def LU(A):
         U[i+1:, i:] = U[i+1:, i:] - L[i+1:, i:i+1] * U[i:i+1, i:]
 
     return P, L, U
+
+
+def solve(A, b):
+    try:
+        ns = get_namespace(A)
+    except TypeError:
+        raise ValueError("Input is not a valid array type")
+
+    P, L, U = LU(A)
+
+    n = A.shape[0]
+    x = ns.empty(n)
+
+    # Apply pivot
+    b = P @ b
+
+    # Forward substitution
+    # NOTE: L is always diagonal!  Skip the division by L[i,i]
+    # Dumb version
+    for i in range(n):
+        x[i] = b[i] - L[i,:i] @ x[:i]
+
+    # Back substitution
+    for i in reversed(range(n)):
+        x[i] = (x[i] - U[i,i+1:] @ x[i+1:]) / U[i,i]
+
+    return x
