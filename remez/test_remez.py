@@ -2,7 +2,7 @@ from remez import remez
 import numpy as np
 import matplotlib.pyplot as plt
 
-n = 12
+n = 13
 
 func = np.exp
 p, roots, nodes, x  = remez(n, 1, func, basis='chebyshev')

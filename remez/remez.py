@@ -44,7 +44,8 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
     # Extrema search grid
     x = np.linspace(-bound, bound, n_grid)
 
-    for _ in range(n_iter):
+    for ni in range(n_iter):
+        print(ni)
         #-- construct the polynomial --#
 
         # Construct polynomial coefficient matrix
@@ -107,9 +108,17 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
         #-- update nodes --#
 
         # Update the positions of the extrema if necessary
+
         # Find the roots of the error function on a dense grid.
-        # TODO: Find a better method
-        roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
+
+        # First make exact zeros slightly positive
+        # TODO: Is this ideal?
+        err_adj = err.copy()
+        err_adj[err == 0.] = 1e-40
+
+        roots = np.where(np.sign(err_adj[:-1]) != np.sign(err_adj[1:]))[0]
+
+        # Append the endpoints, to define endpoint intervals
         if roots[0] != 0:
             roots = np.insert(roots, 0, 0)
         if roots[-1] != len(err)-1:
