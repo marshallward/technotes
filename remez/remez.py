@@ -2,14 +2,19 @@ import gmpy2
 import itertools
 import numpy as np
 from numpy.polynomial.polynomial import Polynomial
+from numpy.polynomial.chebyshev import chebvander, Chebyshev
 import scipy
 
 # What to do here?
 n_grid = 4096
+n_iter = 1
 
-def remez(order, bound, func, func_hi=None):
+def remez(order, bound, func, func_hi=None, basis='monomial'):
     # The Remez algorithm iteratively generates a polynomial which minimizes
     # the error of a prescribed function.
+
+    if basis not in ('monomial', 'chebyshev'):
+        raise ValueError('Unknown basis: {basis!r}')
 
     # Each iteration consists of two stages.
     #
@@ -39,14 +44,17 @@ def remez(order, bound, func, func_hi=None):
     # Extrema search grid
     x = np.linspace(-bound, bound, n_grid)
 
-    for nr in range(20):
-    #for nr in range(1):
-    #for nr in range(2):
+    for _ in range(n_iter):
         #-- construct the polynomial --#
 
         # Construct polynomial coefficient matrix
         R = np.empty((n_nodes, n_nodes))
-        R[:,:-1] = np.vander(nodes, N=n_nodes-1, increasing=True)
+
+        if basis == 'monomial':
+            R[:,:-1] = np.vander(nodes, N=n_nodes-1, increasing=True)
+        elif basis == 'chebyshev':
+            scaled_nodes = nodes / bound
+            R[:,:-1] = chebvander(scaled_nodes, deg=n_nodes-2)
 
         # Append the error oscillation
         R[:,-1] = [(-1)**k for k in range(n_nodes)]
@@ -58,7 +66,10 @@ def remez(order, bound, func, func_hi=None):
         coeff = np.linalg.solve(R, f)
 
         # Build the polynomial
-        mm_poly = Polynomial(coeff[:-1])
+        if basis == 'monomial':
+            mm_poly = Polynomial(coeff[:-1])
+        elif basis == 'chebyshev':
+            mm_poly = Chebyshev(coeff[:-1], domain=[-bound,bound])
 
         # Compute error relative to high-precision exp()
         if func_hi:
@@ -123,7 +134,7 @@ def remez(order, bound, func, func_hi=None):
         #print("nodes = ", nodes)
         #print("err(nodes) = ", func(nodes) - mm_poly(nodes))
         print("======")
-        
+
 
     #return mm_poly
     return mm_poly, roots, nodes, x
