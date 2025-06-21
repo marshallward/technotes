@@ -9,7 +9,7 @@ import scipy
 n_grid = 4096
 n_iter = 1
 
-def remez(order, bound, func, func_hi=None, basis='monomial'):
+def remez(func, order, domain=None, func_hi=None, basis='monomial'):
     # The Remez algorithm iteratively generates a polynomial which minimizes
     # the error of a prescribed function.
 
@@ -39,10 +39,20 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
     # Use nodes of nth order Chebyshev polynomial as a first guess
     d_angle = 180. / n_nodes
     angles = np.linspace(0.5 * d_angle, 180. - 0.5 * d_angle, n_nodes)
-    nodes = bound * scipy.special.cosdg(angles)
+
+    # Rescale Chebyshev nodes from [-1,1] to [a,b]
+    scaled_nodes = scipy.special.cosdg(angles)
+    if domain:
+        median = 0.5 * (domain[0] + domain[1])
+        nodes = median + 0.5 * (domain[1] - domain[0]) * scaled_nodes
+    else:
+        nodes = scaled_nodes
 
     # Extrema search grid
-    x = np.linspace(-bound, bound, n_grid)
+    if domain:
+        x = np.linspace(domain[0], domain[1], n_grid)
+    else:
+        x = np.linspace(-1, 1, n_grid)
 
     for ni in range(n_iter):
         print(ni)
@@ -54,7 +64,6 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
         if basis == 'monomial':
             R[:,:-1] = np.vander(nodes, N=n_nodes-1, increasing=True)
         elif basis == 'chebyshev':
-            scaled_nodes = nodes / bound
             R[:,:-1] = chebvander(scaled_nodes, deg=n_nodes-2)
 
         # Append the error oscillation
@@ -70,7 +79,7 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
         if basis == 'monomial':
             mm_poly = Polynomial(coeff[:-1])
         elif basis == 'chebyshev':
-            mm_poly = Chebyshev(coeff[:-1], domain=[-bound,bound])
+            mm_poly = Chebyshev(coeff[:-1], domain=domain)
 
         # Compute error relative to high-precision exp()
         if func_hi:
@@ -118,6 +127,11 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
 
         roots = np.where(np.sign(err_adj[:-1]) != np.sign(err_adj[1:]))[0]
 
+        if roots.size == 0:
+            # No roots!  This could be good or bad...
+            # For now, assume its FPE noise (i.e. "good news")
+            break
+
         # Append the endpoints, to define endpoint intervals
         if roots[0] != 0:
             roots = np.insert(roots, 0, 0)
@@ -132,6 +146,12 @@ def remez(order, bound, func, func_hi=None, basis='monomial'):
             for l, r in itertools.pairwise(roots)
             if l != r
         ])
+
+        if domain:
+            a, b = domain
+            scaled_nodes = 2. * nodes / (b - a) - (b + a) / (b - a)
+        else:
+            scaled_nodes = nodes
 
         n_nodes = len(nodes)
 
