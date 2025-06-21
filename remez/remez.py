@@ -5,7 +5,7 @@ from numpy.polynomial.polynomial import Polynomial
 import scipy
 
 # What to do here?
-n_grid = 1000
+n_grid = 4096
 
 def remez(order, bound, func, func_hi=None):
     # The Remez algorithm iteratively generates a polynomial which minimizes
@@ -41,6 +41,7 @@ def remez(order, bound, func, func_hi=None):
 
     for nr in range(20):
     #for nr in range(1):
+    #for nr in range(2):
         #-- construct the polynomial --#
 
         # Construct polynomial coefficient matrix
@@ -100,13 +101,14 @@ def remez(order, bound, func, func_hi=None):
         roots = np.where(np.sign(err[:-1]) != np.sign(err[1:]))[0]
         if roots[0] != 0:
             roots = np.insert(roots, 0, 0)
-        roots = np.append(roots, len(err)-1)
+        if roots[-1] != len(err)-1:
+            roots = np.append(roots, len(err)-1)
 
         # Now find the extrema in each segment
         # TODO: Again, write our own algorithm
         # TODO: Enforce minimum spacing if cond(R) is too high?
         nodes = np.array([
-            x[l + np.abs(err[l:r]).argmax()]
+            x[l + np.abs(err[l:r+1]).argmax()]
             for l, r in itertools.pairwise(roots)
             if l != r
         ])
@@ -114,10 +116,12 @@ def remez(order, bound, func, func_hi=None):
         n_nodes = len(nodes)
 
         print("len(roots) = ", len(roots))
-        print("roots = ", x[roots])
-        print("err(roots) = ", func(roots) - mm_poly(x[roots]))
+        #print("roots = ", x[roots])
+        #print("err(roots) = ", func(roots) - mm_poly(x[roots]))
+        print("------")
         print("len(nodes) = ", len(nodes))
-        print("err(nodes) = ", func(nodes) - mm_poly(nodes))
+        #print("nodes = ", nodes)
+        #print("err(nodes) = ", func(nodes) - mm_poly(nodes))
         print("======")
         
 
