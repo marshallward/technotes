@@ -7,9 +7,22 @@ import scipy
 
 # What to do here?
 n_grid = 4096
-n_iter = 1
+n_iter = 20
 
-def remez(func, order, domain=None, func_hi=None, basis='monomial'):
+
+# NOTE: This is ChatGPT brainfart, can probably be integrated into roots[:]
+# NOTE: If too high (say =10) then it hurts convergence.
+def suppress_nearby_roots(roots, min_spacing=2):
+    if len(roots) == 0:
+        return roots
+    filtered = [roots[0]]
+    for r in roots[1:]:
+        if r - filtered[-1] >= min_spacing:
+            filtered.append(r)
+    return np.array(filtered)
+
+
+def remez(func, order, domain=None, func_hi=None, basis='monomial', debug=False):
     # The Remez algorithm iteratively generates a polynomial which minimizes
     # the error of a prescribed function.
 
@@ -55,7 +68,9 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial'):
         x = np.linspace(-1, 1, n_grid)
 
     for ni in range(n_iter):
-        print(ni)
+        if debug:
+            print(ni)
+
         #-- construct the polynomial --#
 
         # Construct polynomial coefficient matrix
@@ -97,23 +112,6 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial'):
 
         #err = np.array([float(gmpy2.exp(y) - mm_poly_rounded(y)) for y in x])
 
-        #-- check for convergence --#
-
-        # Hard condition
-
-        abs_err_bound = np.all(np.abs(err) < np.abs(coeff[-1]))
-
-        # Soft condition: error is within 1ulp (I think?))
-        # TODO: Prob not handling this correctly...
-        soft_err_bound = abs(np.max(err)) - abs(coeff[-1]) < 2**-53
-
-        # What we really want: abs(np.max(err) < 2**53)
-        # but I doubt we're anywhere near that...
-
-        # If we've converged, then we're done.
-        if abs_err_bound or soft_err_bound:
-            break
-
         #-- update nodes --#
 
         # Update the positions of the extrema if necessary
@@ -126,6 +124,9 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial'):
         err_adj[err == 0.] = 1e-40
 
         roots = np.where(np.sign(err_adj[:-1]) != np.sign(err_adj[1:]))[0]
+
+        # Does this work?
+        roots = suppress_nearby_roots(roots)
 
         if roots.size == 0:
             # No roots!  This could be good or bad...
@@ -153,17 +154,37 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial'):
         else:
             scaled_nodes = nodes
 
+        #-- check for convergence --#
+
+        # Hard condition
+
+        abs_err_bound = np.all(np.abs(err) < np.abs(coeff[-1]))
+
+        # Soft condition: error is within 1ulp (I think?))
+        # TODO: Prob not handling this correctly...
+        soft_err_bound = abs(np.max(err)) - abs(coeff[-1]) <= 2**-51
+
+        # What we really want: abs(np.max(err) < 2**53)
+        # but I doubt we're anywhere near that...
+
+        # If we've converged, then we're done.
+        if abs_err_bound or soft_err_bound:
+            break
+
         n_nodes = len(nodes)
 
-        print("len(roots) = ", len(roots))
-        #print("roots = ", x[roots])
-        #print("err(roots) = ", func(roots) - mm_poly(x[roots]))
-        print("------")
-        print("len(nodes) = ", len(nodes))
-        #print("nodes = ", nodes)
-        #print("err(nodes) = ", func(nodes) - mm_poly(nodes))
-        print("======")
+        if debug:
+            print("len(roots) = ", len(roots))
+            #print("roots = ", x[roots])
+            #print("err(roots) = ", func(roots) - mm_poly(x[roots]))
+            print("------")
+            print("len(nodes) = ", len(nodes))
+            #print("nodes = ", nodes)
+            #print("err(nodes) = ", func(nodes) - mm_poly(nodes))
+            print("======")
 
 
-    #return mm_poly
-    return mm_poly, roots, nodes, x
+    if debug:
+        return mm_poly, roots, nodes, x
+    else:
+        return mm_poly
