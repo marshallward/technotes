@@ -40,6 +40,15 @@ def test_overdetermined():
     assert np.allclose(R, np.triu(R))
     assert np.allclose(Q @ R, A)
 
+def test_underdetermined():
+    A = np.random.rand(4,8)
+    Q, R = qr_decomp(A)
+    # maybe i need param testing?
+    I = np.eye(A.shape[0])
+    assert np.allclose(Q.T @ Q, I)
+    assert np.allclose(R, np.triu(R))
+    assert np.allclose(Q @ R, A)
+
 def test_identity():
     A = np.eye(5)
     Q, R = qr_decomp(A, positive_diagonals=True)
