@@ -266,10 +266,82 @@ There are three main methods:
 * Gram rotation
 
 
-Householder method
-------------------
+Householder reflection
+----------------------
 
 This is probably the most common(?)
+
+Below are scrabbly notes from qr.py comments.  Need to be cleaned up!
+
+Reflect column vectors of A[i:,i:] onto basis vectors.
+  A = H(a) R(a)
+
+Brief explanation of householder reflection
+
+Reflection of vector x to xr across plane V (i.e. all y s.t. V.y = 0)
+
+Reflection of a vector :math:`\mathbf{x}` across a plane :math:`\mathbf{v}`
+(that is, the set of vectors :math:`\mathbf{u}` such that :math:`\mathbf{u}
+\cdot \mathbf{v} = 0`) can be defined by the two criteria:
+
+  * :math:`\mathbf{x}_r = \mathbf{x} + \mathbf{v}`
+
+  * :math:`\|\mathbf{x}\| = \|\mathbf{x}_r\|`
+
+The vector norm of the first equation is
+
+.. math::
+
+   \|\mathbf{x}_r\|^2 = \|\mathbf{x}\|^2 + \|\mathbf{v}\|^2 + 2 \mathbf{x}
+   \cdot \mathbf{v}
+
+   \Rightarrow \|\mathbf{v}\| = -2 \mathbf{x} \cdot \hat{\mathbf{v}}
+
+where :math:`\hat{\mathbf{v}}` is the unit vector of :math:`\mathbf{v}`.
+
+Using the magnitude of :math:`\mathbf{v}`, we can compute an expression for
+:math:`\mathbf{x}_r` as a linear transformation of :math:`\mathbf{x}`.
+
+.. math::
+
+   \mathbf{x}_r &= \mathbf{x} + \|\mathbf{v}\| \hat{\mathbf{v}} \\
+     &= \mathbf{x} - 2 (\mathbf{x} \cdot \hat{\mathbf{v}}) \hat{\mathbf{v}} \\
+     &= \mathbf{x} - 2 \hat{\mathbf{v}} (\hat{\mathbf{v}}^T \mathbf{x})
+
+This can be written as a matrix transformation on :math:`\mathbf{x}`.
+
+.. math::
+
+   H( \hat{\mathbf{v}} ) \mathbf{x} 
+      = \left( I - 2 \hat{\mathbf{v}} \hat{\mathbf{v}}^T \right) \mathbf{x}
+
+An important property of :math:`H` is that it is symmetric: :math:`H^T = H`.
+This helps to simplify the orthogonal matrix :math:`Q`.
+
+
+QR Decomposition
+----------------
+
+Since :math:`H` is orthogonal, :math:`A = H^T H A`.  This allows us to
+apply a reflection onto the columns of :math:`A`.  After enough iterations, the
+right-hand side can be reshaped into an upper triangular matrix.
+
+(TODO: But the idea is outlined below)
+
+.. math::
+
+   A &= H_0^T H_0 A \\
+     &= H_0^T H_1^T H_1 H_0 A \\
+     &= \ldots \\
+     &= \left( H_0^T H_1^T \ldots H_{m-1}^T H_m^T \right)
+      \left( H_m H_{m-1} \ldots H_1 H_0 A \right)
+
+Iteratively, this is
+
+.. math::
+
+   Q = Q H_k
+   R = H_k R
 
 
 Generic ChatGPT questions
