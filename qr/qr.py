@@ -1,6 +1,6 @@
 import numpy as np
 
-def qr_decomp(A):
+def qr_decomp(A, positive_diagonals=False):
     # (This belongs in the doc file, but leave it here for now...)
     #
     # Reflect column vectors of A[i:,i:] onto basis vectors.
@@ -67,5 +67,11 @@ def qr_decomp(A):
         # Apply the latest H to Q and R
         Q = Q @ H
         R = H @ R
+
+    if positive_diagonals:
+        for i in range(min(R.shape)):
+            if R[i,i] < 0:
+                R[i,:] *= -1
+                Q[:,i] *= -1
 
     return Q, R

@@ -33,7 +33,7 @@ def test_rank_deficient():
 
 def test_identity():
     A = np.eye(5)
-    Q, R = qr_decomp(A)
+    Q, R = qr_decomp(A, positive_diagonals=True)
     I = np.eye(5)
     assert np.allclose(Q, I)
     assert np.allclose(R, I)
