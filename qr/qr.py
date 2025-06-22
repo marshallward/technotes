@@ -49,17 +49,17 @@ def qr_decomp(A, positive_diagonals=False):
 
     for i in range(nq-1):
         # Construct the basis vector
-        e[:] = 0.
+        # NOTE: For some reason it's faster to use np.zeros()
+        e = np.zeros(nq)
         e[i] = 1.
 
         # Extract the column subvector
-        a[:] = 0.
+        a[:i] = 0.
         a[i:] = R[i:,i]
 
         # Construct the unit plane vector
-        v[:i] = 0.
         v = a + np.linalg.norm(a) * e
-        v = v / np.linalg.norm(v)
+        v[:] = v / np.linalg.norm(v)
 
         # Apply the Householder reflection to A[i,:]
         H = np.eye(nq) - 2. * np.outer(v, v)
