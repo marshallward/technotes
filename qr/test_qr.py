@@ -49,6 +49,11 @@ def test_underdetermined():
     assert np.allclose(R, np.triu(R))
     assert np.allclose(Q @ R, A)
 
+def test_positive_diagonals():
+    A = np.random.rand(5,5)
+    _, R = qr_decomp(A, positive_diagonals=True)
+    assert np.all(np.diag(R) > 0.)
+
 def test_identity():
     A = np.eye(5)
     Q, R = qr_decomp(A, positive_diagonals=True)

@@ -44,7 +44,7 @@ def qr_decomp(A, positive_diagonals=False):
         a[i:] = R[i:,i]
 
         # Construct the unit plane vector
-        v = a + np.sign(a) * np.linalg.norm(a) * e
+        v = a + np.sign(a[i]) * np.linalg.norm(a) * e
         v[:] = v / np.linalg.norm(v)
 
         # Apply the Householder reflection to A[i,:]
