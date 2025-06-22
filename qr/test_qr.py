@@ -31,6 +31,15 @@ def test_rank_deficient():
     Q, R = qr_decomp(A)
     assert np.allclose(Q @ R, A, atol=1e-12)
 
+def test_overdetermined():
+    A = np.random.rand(8,4)
+    Q, R = qr_decomp(A)
+    # maybe i need param testing?
+    I = np.eye(A.shape[0])
+    assert np.allclose(Q.T @ Q, I)
+    assert np.allclose(R, np.triu(R))
+    assert np.allclose(Q @ R, A)
+
 def test_identity():
     A = np.eye(5)
     Q, R = qr_decomp(A, positive_diagonals=True)
