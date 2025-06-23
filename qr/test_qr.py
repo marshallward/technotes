@@ -1,7 +1,7 @@
 import numpy as np
 from qr import qr_decomp
-
-# TODO: Fix the seed?
+#import torch
+#from qr_array import qr_decomp
 
 def test_decomp():
     A = np.random.rand(5,5)
@@ -71,3 +71,8 @@ def test_zero_column():
     A[:,2] = 0.
     Q, R = qr_decomp(A)
     assert np.allclose(Q @ R, A)
+
+#def test_torch():
+#    A = torch.rand(5,5)
+#    Q, R = qr_decomp(A)
+#    torch.allclose(Q @ R, A)
