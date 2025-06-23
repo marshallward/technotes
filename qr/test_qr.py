@@ -54,7 +54,6 @@ def test_reduced():
     Q, R = qr_decomp(A, mode='reduced')
     assert np.allclose(Q @ R, A)
 
-
 def test_positive_diagonals():
     A = np.random.rand(5,5)
     _, R = qr_decomp(A, positive_diagonals=True)
@@ -66,3 +65,9 @@ def test_identity():
     I = np.eye(5)
     assert np.allclose(Q, I)
     assert np.allclose(R, I)
+
+def test_zero_column():
+    A = np.random.rand(5,5)
+    A[:,2] = 0.
+    Q, R = qr_decomp(A)
+    assert np.allclose(Q @ R, A)

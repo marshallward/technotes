@@ -8,8 +8,10 @@ def qr_decomp(A, mode='full', positive_diagonals=False):
     ----------
     A : (m, n) array_like
         A real-valued 2D array to decompose.
-    mode: str
-        TODO 
+    mode: {'full', 'reduced'}, optional
+        Return full matrices, even if problem is overdetermined.
+        'full': Q is mxm, R is mxn with zero-rows retained.
+        'reduced': Q is mxn, R is nxn with zero-rows trimmed.
     positive_diagonals : bool, optional
         If True, ensures that all diagonal elements of R are positive.
 
@@ -45,8 +47,14 @@ def qr_decomp(A, mode='full', positive_diagonals=False):
         a[:i] = 0.
         a[i:] = R[i:,i]
 
+        a_norm = np.linalg.norm(a)
+        if a_norm == 0:
+            # Skip zero-norm columns
+            # I guess they're already zero?
+            continue
+
         # Construct the unit plane vector
-        v = a + np.sign(a[i]) * np.linalg.norm(a) * e
+        v = a + np.sign(a[i]) * a_norm * e
         v[:] = v / np.linalg.norm(v)
 
         # Apply the Householder reflection to A[i,:]
