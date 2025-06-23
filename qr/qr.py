@@ -1,6 +1,6 @@
 import numpy as np
 
-def qr_decomp(A, positive_diagonals=False):
+def qr_decomp(A, mode='full', positive_diagonals=False):
     """
     Compute the QR decomposition of a matrix A using Householder reflections.
 
@@ -8,6 +8,8 @@ def qr_decomp(A, positive_diagonals=False):
     ----------
     A : (m, n) array_like
         A real-valued 2D array to decompose.
+    mode: str
+        TODO 
     positive_diagonals : bool, optional
         If True, ensures that all diagonal elements of R are positive.
 
@@ -60,4 +62,7 @@ def qr_decomp(A, positive_diagonals=False):
                 R[i,:] *= -1
                 Q[:,i] *= -1
 
-    return Q, R
+    if mode == 'reduced' and m > n:
+        return Q[:,:n], R[:n, :]
+    else:
+        return Q, R

@@ -49,6 +49,12 @@ def test_underdetermined():
     assert np.allclose(R, np.triu(R))
     assert np.allclose(Q @ R, A)
 
+def test_reduced():
+    A = np.random.rand(4,8)
+    Q, R = qr_decomp(A, mode='reduced')
+    assert np.allclose(Q @ R, A)
+
+
 def test_positive_diagonals():
     A = np.random.rand(5,5)
     _, R = qr_decomp(A, positive_diagonals=True)
