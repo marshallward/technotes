@@ -12,7 +12,7 @@ real(kind=real64), allocatable :: x(:), r(:)
 real(kind=real128), parameter :: xqmax = 0.5 * log(2.)
 
 integer :: count_rate, count_max, c1, c2
-real(kind=real64) :: clock_rate
+real :: clock_rate
 
 integer :: i, n
 
@@ -32,10 +32,8 @@ rq = exp(xq)
 call system_clock(count_rate=count_rate, count_max=count_max)
 clock_rate = real(count_rate)
 
-! Prime the pump
-r = exp(x)
-
 ! Evaluate exp() niter times
+r = exp(x)
 call system_clock(count=c1)
 do i = 1, niter
   r = exp(x)

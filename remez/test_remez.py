@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import gmpy2
 
-n = 9
+n = 10
 a, b = -0.5 * np.log(2), 0.5 * np.log(2)
 
 def g(x):
@@ -24,8 +24,8 @@ def g_hi(x):
 #plt.show()
 
 #p = remez(func, n, domain=(a,b), basis='chebyshev')
-#p = remez(g, 10, domain=(a,b), basis='chebyshev')
-p = remez(g, 11, domain=(a,b), basis='chebyshev')
+#p = remez(g, n, domain=(a,b), basis='chebyshev')
+p = remez(g, n, domain=(a,b), basis='monomial')
 
 x = np.linspace(a, b, 1024)
 #plt.plot(x, p(x) - func(x))
