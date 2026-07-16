@@ -1,15 +1,20 @@
 module exp_repro
 
-use iso_fortran_env, only : real64, real128
+use iso_fortran_env, only : int64, real64, real128
 
 implicit none
 
-!*!print *, exp(1000._16)
-!*!!print *, exp(1000.)
-!*!print *, exp_cr(1000.)
-!*!
-!*!print *, exp(0.)
-!*!print *, exp_cr(0.)
+! Scalar molds
+integer(kind=int64), parameter :: int64_mod = 0
+real(kind=real64), parameter :: real64_mold = 0.
+
+! Floating point model, where bit layout from high to low is (sign, exp, frac)
+integer, parameter :: bias = maxexponent(real64_mold) - 1
+  !< The double precision exponent offset
+integer, parameter :: explen = storage_size(real64_mold) - digits(real64_mold)
+  !< Bit size of exponent
+integer, parameter :: expbit = digits(real64_mold) - 1
+  !< Position of lowest exponent bit
 
 contains
 
@@ -25,6 +30,12 @@ elemental function exp_cr(x) result(a)
     ! Scaling factor, where exp(x) = 2^K exp(r)
   real(kind=real64) :: e
     ! Scaled result: exp(r)
+
+  ! Descale
+  integer(kind=int64) :: eb
+    ! Bit representation of e
+  integer(kind=int64) :: ek
+    ! Exponent of descaled exponent
 
   ! TODO: Specify as hex to avoid ambiguous rounding
   real(kind=real64), parameter :: INV_LN2 = 1.4426950408889634_real64
@@ -45,10 +56,24 @@ elemental function exp_cr(x) result(a)
   !e = 1. + r * expm1_x_remez(r * TWO_INV_LN2)
   e = 1. + r * expm1_x_estrin(r)
 
-  ! Descale
-  a = scale(e, K)
+  !!!! Descale
+  ! (TODO: Move to function)
 
+  !*!! Intrinsic is unfortunately not always inlined
+  !*!a = scale(e, K)
+
+  ! Get the bitform of e
+  eb = transfer(e, 1_int64)
+
+  ! Extract the exponent (with bias)
+  ek = ibits(eb, expbit, explen)
+
+  ! Apply the descaled exponent
+  call mvbits(ek + K, 0, explen, eb, expbit)
+
+  a = transfer(eb, 1._real64)
 end function exp_cr
+
 
 pure function expm1_x_remez(x) result(e)
   real(kind=real64), intent(in) :: x

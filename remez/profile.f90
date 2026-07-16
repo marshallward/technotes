@@ -23,8 +23,6 @@ allocate(xq(n), rq(n))
 x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
 xq = [(-xqmax + (i - 1) * (2. * xqmax) / (n-1), i=1,n)]
 
-!print *, x
-
 ! Reference results
 rq = exp(xq)
 
@@ -41,8 +39,8 @@ end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a16,1x,g0)', "exp():", (c2 - c1) / clock_rate / niter
-print '(a16,1x,g0)', "  err:", maxval(abs(r - rq))
+print '(a18,1x,g0)', "exp() time:", (c2 - c1) / clock_rate / niter
+print '(a18,1x,g0)', "  err:", maxval(abs(r - rq))
 
 ! repro version?
 r = exp_cr(x)
@@ -53,7 +51,7 @@ end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a16,1x,g0)', "exp_repro():", (c2 - c1) / clock_rate / niter
-print '(a16,1x,g0)', "        err:", maxval(abs(r - rq))
+print '(a18,1x,g0)', "exp_repro() time:", (c2 - c1) / clock_rate / niter
+print '(a18,1x,g0)', "        err:", maxval(abs(r - rq))
 
 end
