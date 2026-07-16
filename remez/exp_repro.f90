@@ -25,11 +25,12 @@ elemental function exp_cr(x) result(a)
     !< Exponential of x [nondim]
 
   real(kind=real64) :: r
-    ! Rescaled value of x: r = x - K * ln 2
-  integer :: K
-    ! Scaling factor, where exp(x) = 2^K exp(r)
+    ! Rescaled value of x; r = x - K * ln 2
+  real(kind=real64) :: K
+    ! Scaling factor, where a = exp(x) = 2**K exp(r)
+    ! Stored as a real to prevent unnecessary type conversion
   real(kind=real64) :: e
-    ! Scaled result: exp(r)
+    ! Scaled result; e = exp(r)
 
   ! Descale
   integer(kind=int64) :: eb
@@ -48,11 +49,11 @@ elemental function exp_cr(x) result(a)
   ! For Chebyshev evaluation
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
-  K = nint(x * INV_LN2)
+  K = anint(x * INV_LN2)
   r = (x - K * LN2_HI) - K * LN2_LO
 
   ! Compute exp(r)
-  ! In order to force exp(0) = 1, we actually approximate (exp(r) - 1) / r.
+  ! In order to force exp(0) = 1, we estimate (exp(r) - 1) / r.
 
   ! The Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
   !e = 1. + r * expm1_x_remez(r * TWO_INV_LN2)
@@ -73,7 +74,7 @@ elemental function exp_cr(x) result(a)
   ek = ibits(eb, expbit, explen)
 
   ! Apply the descaled exponent
-  call mvbits(ek + K, 0, explen, eb, expbit)
+  call mvbits(ek + int(K), 0, explen, eb, expbit)
 
   a = transfer(eb, 1._real64)
 end function exp_cr
