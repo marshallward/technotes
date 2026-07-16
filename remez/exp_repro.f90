@@ -46,7 +46,10 @@ elemental function exp_cr(x) result(a)
   real(kind=real64), parameter :: LN2_HI = 6.93147180369123816490e-01_real64
   real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
 
-  ! For Chebyshev evaluation
+  !$omp declare simd
+
+  !**!! Don't scale?
+  !**!a = 1. + x * expm1_x_estrin(x)
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
   K = anint(x * INV_LN2)
@@ -61,8 +64,7 @@ elemental function exp_cr(x) result(a)
   ! The Estrin form has no such restriction
   e = 1. + r * expm1_x_estrin(r)
 
-  !!!! Descale
-  ! (TODO: Move to function)
+  ! Descale
 
   !*!! Intrinsic is unfortunately not always inlined
   !*!a = scale(e, K)

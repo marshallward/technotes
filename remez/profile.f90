@@ -45,6 +45,7 @@ print '(a18,1x,g0)', "  err:", maxval(abs(r - rq))
 ! repro version?
 r = exp_cr(x)
 call system_clock(count=c1)
+!$omp simd
 do i = 1, niter
   r = exp_cr(x)
 end do

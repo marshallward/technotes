@@ -1,11 +1,19 @@
-FC = gfortran
-FCFLAGS = -g -O3
-LD = gfortran
+## GCC
+#FC = gfortran
+#FCFLAGS = -g -O3
+#LD = gfortran
+#LDFLAGS =
+
+# ifx (Cray-wrapped)
+FC = ftn
+FCFLAGS = -g -O3 -qopenmp-simd
+LD = ftn
+LDFLAGS =
 
 all: runexp
 
 runexp: exp_repro.o profile.o
-	$(LD) -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $^
 
 exp_repro.o: exp_repro.f90
 	$(FC) $(FCFLAGS) -c $<
