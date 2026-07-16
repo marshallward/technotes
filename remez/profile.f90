@@ -16,7 +16,7 @@ real :: clock_rate
 
 integer :: i, n
 
-n = 1000000
+n = 10000000
 allocate(x(n), r(n))
 allocate(xq(n), rq(n))
 

@@ -53,7 +53,11 @@ elemental function exp_cr(x) result(a)
 
   ! Compute exp(r)
   ! In order to force exp(0) = 1, we actually approximate (exp(r) - 1) / r.
+
+  ! The Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
   !e = 1. + r * expm1_x_remez(r * TWO_INV_LN2)
+
+  ! The Estrin form has no such restriction
   e = 1. + r * expm1_x_estrin(r)
 
   !!!! Descale
