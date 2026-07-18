@@ -18,6 +18,17 @@ integer, parameter :: expbit = digits(real64_mold) - 1
 
 contains
 
+pure subroutine exp_1d(x, a)
+  real(real64), intent(in) :: x(:)
+  real(real64), intent(out) :: a(:)
+  integer :: i
+
+  do i = 1,size(x)
+    a(i) = exp_cr(x(i))
+  enddo
+end subroutine exp_1d
+
+
 elemental function exp_cr(x) result(a)
   real(kind=real64), intent(in) :: x
     !< Input value [nondim]

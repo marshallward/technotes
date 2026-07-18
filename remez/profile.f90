@@ -23,14 +23,14 @@ allocate(xq(n), rq(n))
 x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
 xq = [(-xqmax + (i - 1) * (2. * xqmax) / (n-1), i=1,n)]
 
-! Reference results
+! Reference real128 values
 rq = exp(xq)
 
 ! Set up clock
 call system_clock(count_rate=count_rate, count_max=count_max)
 clock_rate = real(count_rate)
 
-! Evaluate exp() niter times
+! Intrinsic exp()
 r = exp(x)
 call system_clock(count=c1)
 do i = 1, niter
@@ -40,9 +40,9 @@ call system_clock(count=c2)
 
 ! Report results
 print '(a18,1x,g0)', "exp() time:", (c2 - c1) / clock_rate / niter
-print '(a18,1x,g0)', "  err:", maxval(abs(r - rq))
+print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
 
-! repro version?
+! Elemental version
 r = exp_cr(x)
 call system_clock(count=c1)
 !$omp simd
@@ -52,7 +52,19 @@ end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a18,1x,g0)', "exp_repro() time:", (c2 - c1) / clock_rate / niter
-print '(a18,1x,g0)', "        err:", maxval(abs(r - rq))
+print '(a18,1x,g0)', "exp_cr() time:", (c2 - c1) / clock_rate / niter
+print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
+
+! Internal 1d loop
+call exp_1d(x, r)
+call system_clock(count=c1)
+do i = 1, niter
+  call exp_1d(x, r)
+end do
+call system_clock(count=c2)
+
+! Report results
+print '(a18,1x,g0)', "exp_1d() time:", (c2 - c1) / clock_rate / niter
+print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
 
 end
