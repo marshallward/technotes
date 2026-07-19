@@ -3,13 +3,15 @@ use exp_repro
 
 implicit none
 
+integer, parameter :: realq = merge(real128, real64, real128 > 0)
+
 integer, parameter :: niter = 20
 
 real(kind=real64), parameter :: xmax = 0.5 * log(2.)
-real(kind=real128), allocatable :: xq(:), rq(:)
+real(kind=realq), allocatable :: xq(:), rq(:)
 
 real(kind=real64), allocatable :: x(:), r(:)
-real(kind=real128), parameter :: xqmax = 0.5 * log(2.)
+real(kind=realq), parameter :: xqmax = 0.5 * log(2.)
 
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
@@ -23,7 +25,7 @@ allocate(xq(n), rq(n))
 x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
 xq = [(-xqmax + (i - 1) * (2. * xqmax) / (n-1), i=1,n)]
 
-! Reference real128 values
+! Reference realq values
 rq = exp(xq)
 
 ! Set up clock
