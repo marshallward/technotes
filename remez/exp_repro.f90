@@ -200,4 +200,33 @@ pure function expm1_x_estrin(x) result(e)
   e = q0 + x4 * q1 + x8 * (b4 + x2 * c(10))
 end function expm1_x_estrin
 
+elemental function exp_taylor(x) result(ex)
+  !$omp declare target
+  !$acc routine seq
+  real(kind=real64), intent(in) :: x  !< The argument of the exponential [nondim or arbitrary]
+  real(kind=real64) :: ex             !< The reproducible exponential of x [same as exp(x)]
+
+  ! Cody-Waite split of ln(2): ln2 = ln2_hi + ln2_lo, with ln2_hi chosen so k*ln2_hi is ~exact.
+  real(kind=real64), parameter :: invln2 = 1.44269504088896338700  ! 1/ln(2) [nondim]
+  real(kind=real64), parameter :: ln2_hi = 0.693147180369123816490 ! High part of ln(2) [nondim]
+  real(kind=real64), parameter :: ln2_lo = 1.90821492927058770002e-10 ! Low part of ln(2) [nondim]
+  ! Reciprocal factorials 1/2! .. 1/12! (compile-time constant-folded -> identical host/device).
+  real(kind=real64), parameter :: c2 = 1.0/2.0,        c3 = 1.0/6.0,         c4 = 1.0/24.0
+  real(kind=real64), parameter :: c5 = 1.0/120.0,      c6 = 1.0/720.0,       c7 = 1.0/5040.0
+  real(kind=real64), parameter :: c8 = 1.0/40320.0,    c9 = 1.0/362880.0,    c10 = 1.0/3628800.0
+  real(kind=real64), parameter :: c11 = 1.0/39916800.0, c12 = 1.0/479001600.0
+  real(kind=real64) :: r  ! The reduced argument, x - k*ln2, in [-ln2/2, ln2/2] [nondim]
+  real(kind=real64) :: p  ! The polynomial estimate of exp(r) [nondim]
+  integer :: k ! The integer number of factors of 2 in exp(x) [nondim]
+
+  k = nint(x*invln2)
+  r = (x - real(k)*ln2_hi) - real(k)*ln2_lo
+
+  ! Horner form of 1 + r + r^2/2! + ... + r^12/12!
+  p = 1.0 + r*(1.0 + r*(c2 + r*(c3 + r*(c4 + r*(c5 + r*(c6 + r*(c7 + &
+      r*(c8 + r*(c9 + r*(c10 + r*(c11 + r*c12)))))))))))
+
+  ex = scale(p, k)
+end function exp_taylor
+
 end module exp_repro
