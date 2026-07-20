@@ -49,6 +49,8 @@ elemental function exp_cr(x) result(a)
 
   real(kind=real64) :: r
     ! Rescaled value of x; r = x - K * ln 2
+  real(kind=real64) :: k_ln2
+    ! Intermediate scaling value, K * ln2
   real(kind=real64) :: K
     ! Scaling factor, where a = exp(x) = 2**K exp(r)
     ! Stored as a real to prevent unnecessary type conversion
@@ -71,20 +73,23 @@ elemental function exp_cr(x) result(a)
 
   !$omp declare simd
 
-  !**!! Don't scale?
+  !**!! XXX: Use this for profiling without scaling.
   !**!a = 1. + x * expm1_x_estrin(x)
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
-  K = anint(x * INV_LN2)
+  ! NOTE: anint() is a function call in GCC, so the following is faster.
+  K_ln2 = x * INV_LN2
+  K = aint(K_ln2 + sign(0.5_real64, K_ln2))
+
+  ! Cody-Waite split
   r = (x - K * LN2_HI) - K * LN2_LO
 
-  ! Compute exp(r)
   ! In order to force exp(0) = 1, we estimate (exp(r) - 1) / r.
 
-  ! The Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
+  ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
   !e = 1. + r * expm1_x_remez(r * TWO_INV_LN2)
 
-  ! The Estrin form has no such restriction
+  ! Estrin form does not require rescaling.
   e = 1. + r * expm1_x_estrin(r)
 
   ! Descale
@@ -218,6 +223,8 @@ elemental function exp_taylor(x) result(ex)
   real(kind=real64) :: r  ! The reduced argument, x - k*ln2, in [-ln2/2, ln2/2] [nondim]
   real(kind=real64) :: p  ! The polynomial estimate of exp(r) [nondim]
   integer :: k ! The integer number of factors of 2 in exp(x) [nondim]
+
+  !$omp declare simd
 
   k = nint(x*invln2)
   r = (x - real(k)*ln2_hi) - real(k)*ln2_lo
