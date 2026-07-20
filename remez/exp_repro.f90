@@ -29,7 +29,19 @@ pure subroutine exp_1d(x, a)
 end subroutine exp_1d
 
 
+pure subroutine exp_1d_do_c(x, a)
+  real(real64), intent(in) :: x(:)
+  real(real64), intent(out) :: a(:)
+  integer :: i
+
+  do concurrent (i = 1:size(x))
+    a(i) = exp_cr(x(i))
+  enddo
+end subroutine exp_1d_do_c
+
+
 elemental function exp_cr(x) result(a)
+  !$acc routine seq
   real(kind=real64), intent(in) :: x
     !< Input value [nondim]
   real(kind=real64) :: a
