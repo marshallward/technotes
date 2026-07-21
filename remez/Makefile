@@ -1,14 +1,14 @@
-# GCC
-FC = gfortran
-FCFLAGS = -g -O3 -mavx -mfma -march=native
-LD = gfortran
-LDFLAGS =
-
-## ifx (Cray-wrapped)
-#FC = ftn
-#FCFLAGS = -g -O3 -qopenmp-simd -assume protect_parens
-#LD = ftn
+## GCC
+#FC = gfortran
+#FCFLAGS = -g -O3 -mavx -mfma -march=native
+#LD = gfortran
 #LDFLAGS =
+
+# ifx (Cray-wrapped)
+FC = ftn
+FCFLAGS = -g -O3 -qopenmp-simd -assume protect_parens -no-ftz
+LD = ftn
+LDFLAGS =
 
 ## NVHPC
 #FC = nvfortran

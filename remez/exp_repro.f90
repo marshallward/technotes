@@ -50,7 +50,7 @@ elemental function exp_cr(x) result(a)
   real(kind=real64) :: r
     ! Rescaled value of x; r = x - K * ln 2
   real(kind=real64) :: x_ln2
-    ! Intermediate scaling value, K * ln2
+    ! Intermediate scaling value, x / ln2
   real(kind=real64) :: K
     ! Scaling factor, where a = exp(x) = 2**K exp(r)
     ! Stored as a real to prevent unnecessary type conversion
@@ -64,6 +64,7 @@ elemental function exp_cr(x) result(a)
     ! Exponent of descaled exponent
 
   ! TODO: Specify as hex to avoid ambiguous rounding
+  real(kind=real64), parameter :: LN2 = 0.6931471805599453_real64
   real(kind=real64), parameter :: INV_LN2 = 1.4426950408889634_real64
   !real, parameter :: INV_LN2 = 1.44269504088896340735992468100189204
   real(kind=real64), parameter :: TWO_INV_LN2 = 2.8853900817779268_real64
@@ -74,10 +75,12 @@ elemental function exp_cr(x) result(a)
   ! Experimental
   real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
 
+  real(kind=real64) :: s
+
   !$omp declare simd
 
-  !**!! XXX: Use this for profiling without scaling.
-  !**!a = 1. + x * expm1_x_estrin(x)
+  ! XXX: Use this for profiling without scaling.
+  !a = exp_remez_estrin(x)
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
 
@@ -85,10 +88,10 @@ elemental function exp_cr(x) result(a)
 
   ! Crude implementation of anint(x_ln2).
   ! NOTE: In x86 GCC, this favors vround instructions over round() calls.
-  !K = aint(x_ln2 + sign(0.5_real64, x_ln2))
+  K = aint(x_ln2 + sign(0.5_real64, x_ln2))
 
   ! TODO: This is faster but may be removed by optimization
-  K = (x_ln2 + round_bias) - round_bias
+  !K = (x_ln2 + round_bias) - round_bias
 
   ! Cody-Waite split
   ! This decomposition preserves lower bits after integer cancellation.
@@ -98,38 +101,32 @@ elemental function exp_cr(x) result(a)
   r = (x - K * LN2_HI) - K * LN2_LO
 
   ! This is less accurate if abs(K) is large, but is faster
-  !r = x - K * log(2._real64)
+  !r = x - K * LN2
 
   ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
   !e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
   e = exp_remez_estrin(r)
+  !e = exp_remez_estrin9(r)
   !e = exp_taylor_horner(r)
   !e = exp_taylor_estrin(r)
 
-  ! Descale
+  ! Descale the value
 
-  !*!! Intrinsic is unfortunately not always inlined
-  !*!a = scale(e, K)
+	if (K >= -1020.0_real64 .and. K <= 1020.0_real64) then
+    ! Get the bitform of e.
+	  eb = transfer(e, int64_mold)
 
-  ! Crude implementation of scale(e, K).
-  ! NOTE: This may create problems with Inf, NaN, and subnormals.
+    ! Shift K to the significand's least significant bits.
+    ! kb is now the integer value of K (excepting special IEEE values).
+	  kb = transfer(K + round_bias, int64_mold)
 
-  ! Get the bitform of e
-  eb = transfer(e, int64_mold)
-
-  ! Works, but int(K) is slow!
-  !*!! Extract the exponent (with bias)
-  !*!!ek = ibits(eb, expbit, explen)
-
-  !*!! Apply the descaled exponent
-  !*!!call mvbits(ek + int(K), 0, explen, eb, expbit)
-
-  ! Extract the integer-biased value of K
-  kb = transfer(K + round_bias, int64_mold)
-  eb = eb + shiftl(kb, expbit)
-
-  ! Back to float format
-  a = transfer(eb, 1._real64)
+    ! Apply the K exponent to e's exponent.
+	  eb = eb + shiftl(kb, expbit)
+	  a = transfer(eb, 1.0_real64)
+	else
+    ! For exceptional values, fallback to intrinsics for rescaling.
+		a = scale(e, int(K))
+	end if
 end function exp_cr
 
 
@@ -231,6 +228,49 @@ pure function exp_remez_estrin(x) result(e)
 
   e = 1 + x * (q0 + x4 * q1 + x8 * (b4 + x2 * c(10)))
 end function exp_remez_estrin
+
+
+pure function exp_remez_estrin9(x) result(e)
+  real(kind=real64), intent(in) :: x
+    !< Input value
+  real(kind=real64) :: e
+    !< Approximation of exp(x)
+
+  real(real64), parameter :: c(0:9) = [ &
+      1.00000000000000133e+00_real64, &
+      5.00000000000001776e-01_real64, &
+      1.66666666666236918e-01_real64, &
+      4.16666666664353008e-02_real64, &
+      8.33333336355678196e-03_real64, &
+      1.38888889752610879e-03_real64, &
+      1.98411961311610672e-04_real64, &
+      2.48014555669475914e-05_real64, &
+      2.76301733424592505e-06_real64, &
+      2.76447983021274086e-07_real64 &
+  ]
+
+  real(real64) :: x2, x4, x8, t0_0, t0_1, t0_2, t0_3, t0_4, &
+                  t1_0, t1_1, t1_2, t2_0, t2_1
+
+  x2 = x * x
+  x4 = x2 * x2
+  x8 = x4 * x4
+
+  t0_0 = c(0) + x * c(1)
+  t0_1 = c(2) + x * c(3)
+  t0_2 = c(4) + x * c(5)
+  t0_3 = c(6) + x * c(7)
+  t0_4 = c(8) + x * c(9)
+
+  t1_0 = t0_0 + x2 * t0_1
+  t1_1 = t0_2 + x2 * t0_3
+  t1_2 = t0_4
+
+  t2_0 = t1_0 + x4 * t1_1
+  t2_1 = t1_2
+
+  e = 1. + x * (t2_0 + x8 * t2_1)
+end function exp_remez_estrin9
 
 
 elemental function exp_taylor_horner(x) result(e)
