@@ -71,31 +71,46 @@ elemental function exp_cr(x) result(a)
   real(kind=real64), parameter :: LN2_HI = 6.93147180369123816490e-01_real64
   real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
 
+  ! Experimental
+  real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
+
   !$omp declare simd
 
   !**!! XXX: Use this for profiling without scaling.
   !**!a = 1. + x * expm1_x_estrin(x)
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
-  ! NOTE: anint() is a function call in GCC, so the following is faster.
+
   K_ln2 = x * INV_LN2
-  K = aint(K_ln2 + sign(0.5_real64, K_ln2))
+
+  ! Crude implementation of anint(K_ln2).
+  ! NOTE: In x86 GCC, this favors vround instructions over round() calls.
+  !K = aint(K_ln2 + sign(0.5_real64, K_ln2))
+
+  ! TODO: This is faster but may be removed by optimization
+  K = (K_ln2 + round_bias) - round_bias
 
   ! Cody-Waite split
+  ! This decomposition preserves lower bits after integer cancellation.
+  ! TODO: Explain this better
+  ! NOTE: This may be optimized to `x - K * (LN2_HI + L2_LI)` which is no
+  !   better than x - K * LN2
   r = (x - K * LN2_HI) - K * LN2_LO
 
-  ! In order to force exp(0) = 1, we estimate (exp(r) - 1) / r.
+  !r = x - K * log(2._real64)
 
   ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
-  !e = 1. + r * expm1_x_remez(r * TWO_INV_LN2)
-
-  ! Estrin form does not require rescaling.
-  e = 1. + r * expm1_x_estrin(r)
+  !e = exp_chebyshev(r * TWO_INV_LN2)
+  e = exp_estrin(r)
+  !e = exp_taylor(r)
 
   ! Descale
 
   !*!! Intrinsic is unfortunately not always inlined
   !*!a = scale(e, K)
+
+  ! Crude implementation of scale(e, K).
+  ! NOTE: This may create problems with Inf, NaN, and subnormals.
 
   ! Get the bitform of e
   eb = transfer(e, 1_int64)
@@ -110,7 +125,7 @@ elemental function exp_cr(x) result(a)
 end function exp_cr
 
 
-pure function expm1_x_remez(x) result(e)
+pure function exp_chebyshev(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -150,6 +165,8 @@ pure function expm1_x_remez(x) result(e)
   !  3.7974225925737191e-17_real64 &
   !]
 
+  ! NOTE: In order to force exp(0) = 1, we estimate (exp(r) - 1) / r.
+
   b1 = 0.0
   b2 = 0.0
 
@@ -159,11 +176,11 @@ pure function expm1_x_remez(x) result(e)
     b1 = b0
   enddo
 
-  e = t(0) + x * b1 - b2
-end function expm1_x_remez
+  e = 1 + x * (t(0) + x * b1 - b2)
+end function exp_chebyshev
 
 
-pure function expm1_x_estrin(x) result(e)
+pure function exp_estrin(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -189,6 +206,8 @@ pure function expm1_x_estrin(x) result(e)
     2.52312075296588332e-08_real64 &
   ]
 
+  ! NOTE: In order to force exp(0) = 1, we estimate (exp(r) - 1) / r.
+
   x2 = x * x
   x4 = x2 * x2
   x8 = x4 * x4
@@ -202,38 +221,40 @@ pure function expm1_x_estrin(x) result(e)
   q0 = b0 + x2 * b1
   q1 = b2 + x2 * b3
 
-  e = q0 + x4 * q1 + x8 * (b4 + x2 * c(10))
-end function expm1_x_estrin
+  e = 1 + x * (q0 + x4 * q1 + x8 * (b4 + x2 * c(10)))
+end function exp_estrin
 
-elemental function exp_taylor(x) result(ex)
-  !$omp declare target
-  !$acc routine seq
-  real(kind=real64), intent(in) :: x  !< The argument of the exponential [nondim or arbitrary]
-  real(kind=real64) :: ex             !< The reproducible exponential of x [same as exp(x)]
 
-  ! Cody-Waite split of ln(2): ln2 = ln2_hi + ln2_lo, with ln2_hi chosen so k*ln2_hi is ~exact.
-  real(kind=real64), parameter :: invln2 = 1.44269504088896338700  ! 1/ln(2) [nondim]
-  real(kind=real64), parameter :: ln2_hi = 0.693147180369123816490 ! High part of ln(2) [nondim]
-  real(kind=real64), parameter :: ln2_lo = 1.90821492927058770002e-10 ! Low part of ln(2) [nondim]
-  ! Reciprocal factorials 1/2! .. 1/12! (compile-time constant-folded -> identical host/device).
-  real(kind=real64), parameter :: c2 = 1.0/2.0,        c3 = 1.0/6.0,         c4 = 1.0/24.0
-  real(kind=real64), parameter :: c5 = 1.0/120.0,      c6 = 1.0/720.0,       c7 = 1.0/5040.0
-  real(kind=real64), parameter :: c8 = 1.0/40320.0,    c9 = 1.0/362880.0,    c10 = 1.0/3628800.0
-  real(kind=real64), parameter :: c11 = 1.0/39916800.0, c12 = 1.0/479001600.0
-  real(kind=real64) :: r  ! The reduced argument, x - k*ln2, in [-ln2/2, ln2/2] [nondim]
-  real(kind=real64) :: p  ! The polynomial estimate of exp(r) [nondim]
-  integer :: k ! The integer number of factors of 2 in exp(x) [nondim]
+elemental function exp_taylor(x) result(e)
+  real(kind=real64), intent(in) :: x
+    !< Input value
+  real(kind=real64) :: e
+    !< Approximation of exp(x)
 
-  !$omp declare simd
+  real(kind=real64), parameter :: c(0:12) = [ &
+    1.0_real64, &
+    1.0_real64, &
+    1.0_real64 / 2.0_real64, &
+    1.0_real64 / 6.0_real64, &
+    1.0_real64 / 24.0_real64, &
+    1.0_real64 / 120.0_real64, &
+    1.0_real64 / 720.0_real64, &
+    1.0_real64 / 5040.0_real64, &
+    1.0_real64 / 40320.0_real64, &
+    1.0_real64 / 362880.0_real64, &
+    1.0_real64 / 3628800.0_real64, &
+    1.0_real64 / 39916800.0_real64, &
+    1.0_real64 / 479001600.0_real64 &
+  ]
+    !< Taylor coefficients 1/n!
 
-  k = nint(x*invln2)
-  r = (x - real(k)*ln2_hi) - real(k)*ln2_lo
+  integer :: n
 
-  ! Horner form of 1 + r + r^2/2! + ... + r^12/12!
-  p = 1.0 + r*(1.0 + r*(c2 + r*(c3 + r*(c4 + r*(c5 + r*(c6 + r*(c7 + &
-      r*(c8 + r*(c9 + r*(c10 + r*(c11 + r*c12)))))))))))
-
-  ex = scale(p, k)
+  e = 0
+  do n = 12,0,-1
+    e = x * e + c(n)
+  enddo
 end function exp_taylor
+
 
 end module exp_repro
