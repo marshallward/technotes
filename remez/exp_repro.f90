@@ -1,6 +1,6 @@
 module exp_repro
 
-use iso_fortran_env, only : int64, real64, real128
+use, intrinsic :: iso_fortran_env, only : int64, real64, real128
 
 implicit none
 
@@ -19,8 +19,8 @@ integer, parameter :: expbit = digits(real64_mold) - 1
 contains
 
 pure subroutine exp_1d(x, a)
-  real(real64), intent(in) :: x(:)
-  real(real64), intent(out) :: a(:)
+  real(kind=real64), intent(in) :: x(:)
+  real(kind=real64), intent(out) :: a(:)
   integer :: i
 
   do i = 1,size(x)
@@ -30,8 +30,8 @@ end subroutine exp_1d
 
 
 pure subroutine exp_1d_do_c(x, a)
-  real(real64), intent(in) :: x(:)
-  real(real64), intent(out) :: a(:)
+  real(kind=real64), intent(in) :: x(:)
+  real(kind=real64), intent(out) :: a(:)
   integer :: i
 
   do concurrent (i = 1:size(x))
@@ -100,9 +100,10 @@ elemental function exp_cr(x) result(a)
   !r = x - K * log(2._real64)
 
   ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
-  !e = exp_chebyshev(r * TWO_INV_LN2)
-  e = exp_estrin(r)
-  !e = exp_taylor(r)
+  !e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
+  e = exp_remez_estrin(r)
+  !e = exp_taylor_horner(r)
+  !e = exp_taylor_estrin(r)
 
   ! Descale
 
@@ -125,7 +126,7 @@ elemental function exp_cr(x) result(a)
 end function exp_cr
 
 
-pure function exp_chebyshev(x) result(e)
+pure function exp_remez_chebyshev(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -176,11 +177,11 @@ pure function exp_chebyshev(x) result(e)
     b1 = b0
   enddo
 
-  e = 1 + x * (t(0) + x * b1 - b2)
-end function exp_chebyshev
+  e = t(0) + x * b1 - b2
+end function exp_remez_chebyshev
 
 
-pure function exp_estrin(x) result(e)
+pure function exp_remez_estrin(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -222,10 +223,10 @@ pure function exp_estrin(x) result(e)
   q1 = b2 + x2 * b3
 
   e = 1 + x * (q0 + x4 * q1 + x8 * (b4 + x2 * c(10)))
-end function exp_estrin
+end function exp_remez_estrin
 
 
-elemental function exp_taylor(x) result(e)
+elemental function exp_taylor_horner(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -254,7 +255,56 @@ elemental function exp_taylor(x) result(e)
   do n = 12,0,-1
     e = x * e + c(n)
   enddo
-end function exp_taylor
+end function exp_taylor_horner
 
+
+elemental function exp_taylor_estrin(x) result(e)
+  real(kind=real64), intent(in) :: x
+    !< Input value
+  real(kind=real64) :: e
+    !< Approximation of exp(x)
+
+  real(kind=real64), parameter :: c(0:12) = [ &
+    1.0_real64, &
+    1.0_real64, &
+    1.0_real64 / 2.0_real64, &
+    1.0_real64 / 6.0_real64, &
+    1.0_real64 / 24.0_real64, &
+    1.0_real64 / 120.0_real64, &
+    1.0_real64 / 720.0_real64, &
+    1.0_real64 / 5040.0_real64, &
+    1.0_real64 / 40320.0_real64, &
+    1.0_real64 / 362880.0_real64, &
+    1.0_real64 / 3628800.0_real64, &
+    1.0_real64 / 39916800.0_real64, &
+    1.0_real64 / 479001600.0_real64 &
+  ]
+    !< Taylor coefficients 1/n!
+
+  real(kind=real64) :: x2, x4, x8
+  real(kind=real64) :: p0, p1, p2, p3, p4, p5
+  real(kind=real64) :: q0, q1, q2
+  real(kind=real64) :: r0, r1
+
+  x2 = x * x
+  x4 = x2 * x2
+  x8 = x4 * x4
+
+  p0 = c(0)  + x * c(1)
+  p1 = c(2)  + x * c(3)
+  p2 = c(4)  + x * c(5)
+  p3 = c(6)  + x * c(7)
+  p4 = c(8)  + x * c(9)
+  p5 = c(10) + x * c(11)
+
+  q0 = p0 + x2 * p1
+  q1 = p2 + x2 * p3
+  q2 = p4 + x2 * p5
+
+  r0 = q0 + x4 * q1
+  r1 = q2 + x4 * c(12)
+
+  e = r0 + x8 * r1
+end function exp_taylor_estrin
 
 end module exp_repro

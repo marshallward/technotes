@@ -7,11 +7,11 @@ integer, parameter :: realq = merge(real128, real64, real128 > 0)
 
 integer, parameter :: niter = 20
 
-real(kind=real64), parameter :: xmax = 500.!0.5 * log(2.)
+real(kind=real64), parameter :: xmax = 0.5 * log(2.)
 real(kind=realq), allocatable :: xq(:), rq(:)
 
 real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_t(:)
-real(kind=realq), parameter :: xqmax = 500.!0.5 * log(2.)
+real(kind=realq), parameter :: xqmax = 0.5 * log(2.)
 
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
