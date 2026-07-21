@@ -5,8 +5,11 @@ from numpy.polynomial.polynomial import Polynomial
 from numpy.polynomial.chebyshev import chebvander, Chebyshev
 import scipy
 
+# Precision used for high-precision target and polynomial evaluation.
+gmpy2.get_context().precision = 200
+
 # What to do here?
-n_grid = 4096
+n_grid = 16385
 n_iter = 20
 
 
@@ -21,6 +24,30 @@ def suppress_nearby_roots(roots, min_spacing=2):
             filtered.append(r)
     return np.array(filtered)
 
+
+def polyval_hi(coeff, x):
+    """Evaluate a monomial-basis polynomial in gmpy2 precision."""
+    x = gmpy2.mpfr(x)
+    value = gmpy2.mpfr(0)
+
+    for c in reversed(coeff):
+        value = value * x + gmpy2.mpfr(float(c))
+
+    return value
+
+
+def chebval_hi(coeff, x_scaled):
+    """Evaluate a Chebyshev series in gmpy2 precision using Clenshaw."""
+    x_scaled = gmpy2.mpfr(x_scaled)
+    b_kplus1 = gmpy2.mpfr(0)
+    b_kplus2 = gmpy2.mpfr(0)
+
+    for c in reversed(coeff[1:]):
+        b_k = 2 * x_scaled * b_kplus1 - b_kplus2 + gmpy2.mpfr(float(c))
+        b_kplus2 = b_kplus1
+        b_kplus1 = b_k
+
+    return x_scaled * b_kplus1 - b_kplus2 + gmpy2.mpfr(float(coeff[0]))
 
 def remez(func, order, domain=None, func_hi=None, basis='monomial', debug=False):
     # The Remez algorithm iteratively generates a polynomial which minimizes
@@ -48,6 +75,7 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial', debug=False)
 
     # Nth order polynomial in fixed doman has n+2 extrema
     n_nodes = order + 2
+    expected_nodes = n_nodes
 
     # Use nodes of nth order Chebyshev polynomial as a first guess
     d_angle = 180. / n_nodes
@@ -98,7 +126,23 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial', debug=False)
 
         # Compute error relative to high-precision exp()
         if func_hi:
-            err = np.array([float(func_hi(y) - mm_poly(y)) for y in x])
+            poly_coeff = coeff[:-1]
+
+            if basis == 'monomial':
+                err = np.array([
+                    float(func_hi(y) - polyval_hi(poly_coeff, y))
+                    for y in x
+                ])
+            elif basis == 'chebyshev':
+                x_scaled = (
+                    2. * x / (domain[1] - domain[0])
+                    - (domain[1] + domain[0]) / (domain[1] - domain[0])
+                    if domain is not None else x
+                )
+                err = np.array([
+                    float(func_hi(y) - chebval_hi(poly_coeff, ys))
+                    for y, ys in zip(x, x_scaled)
+                ])
         else:
             err = func(x) - mm_poly(x)
 
@@ -118,10 +162,23 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial', debug=False)
 
         # Find the roots of the error function on a dense grid.
 
+        #--#
+
         # First make exact zeros slightly positive
-        # TODO: Is this ideal?
+        # (Actually, GPT says to try preserve adjacent sign...)
+
         err_adj = err.copy()
-        err_adj[err == 0.] = 1e-40
+        zero = err_adj == 0.0
+
+        # Propagate the previous nonzero value forward.
+        for i in range(1, len(err_adj)):
+            if zero[i]:
+                err_adj[i] = err_adj[i - 1]
+
+        # Handle any leading zeros by propagating backward.
+        for i in range(len(err_adj) - 2, -1, -1):
+            if err_adj[i] == 0.0:
+                err_adj[i] = err_adj[i + 1]
 
         roots = np.where(np.sign(err_adj[:-1]) != np.sign(err_adj[1:]))[0]
 
@@ -171,7 +228,23 @@ def remez(func, order, domain=None, func_hi=None, basis='monomial', debug=False)
         if abs_err_bound or soft_err_bound:
             break
 
-        n_nodes = len(nodes)
+        # I used to just change the order:
+        #n_nodes = len(nodes)
+
+        # ... but GPT said this is dangerous.  Ok?
+        if len(nodes) != expected_nodes:
+            print(
+                f"iter {ni}: "
+                f"roots={len(roots)} "
+                f"nodes={len(nodes)} "
+                f"expected={order+2}"
+            )
+
+            # But break if you just want the coefs
+            raise RuntimeError(
+                f"Remez exchange failed at iteration {ni}: "
+                f"expected {expected_nodes} extrema, found {len(nodes)}"
+            )
 
         if debug:
             print("len(roots) = ", len(roots))
