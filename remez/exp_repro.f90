@@ -5,7 +5,7 @@ use, intrinsic :: iso_fortran_env, only : int64, real64, real128
 implicit none
 
 ! Scalar molds
-integer(kind=int64), parameter :: int64_mod = 0
+integer(kind=int64), parameter :: int64_mold = 0
 real(kind=real64), parameter :: real64_mold = 0.
 
 ! Floating point model, where bit layout from high to low is (sign, exp, frac)
@@ -49,7 +49,7 @@ elemental function exp_cr(x) result(a)
 
   real(kind=real64) :: r
     ! Rescaled value of x; r = x - K * ln 2
-  real(kind=real64) :: k_ln2
+  real(kind=real64) :: x_ln2
     ! Intermediate scaling value, K * ln2
   real(kind=real64) :: K
     ! Scaling factor, where a = exp(x) = 2**K exp(r)
@@ -58,8 +58,8 @@ elemental function exp_cr(x) result(a)
     ! Scaled result; e = exp(r)
 
   ! Descale
-  integer(kind=int64) :: eb
-    ! Bit representation of e
+  integer(kind=int64) :: eb, kb
+    ! Bit representation of e and (round-biased) K
   integer(kind=int64) :: ek
     ! Exponent of descaled exponent
 
@@ -81,14 +81,14 @@ elemental function exp_cr(x) result(a)
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
 
-  K_ln2 = x * INV_LN2
+  x_ln2 = x * INV_LN2
 
-  ! Crude implementation of anint(K_ln2).
+  ! Crude implementation of anint(x_ln2).
   ! NOTE: In x86 GCC, this favors vround instructions over round() calls.
-  !K = aint(K_ln2 + sign(0.5_real64, K_ln2))
+  !K = aint(x_ln2 + sign(0.5_real64, x_ln2))
 
   ! TODO: This is faster but may be removed by optimization
-  K = (K_ln2 + round_bias) - round_bias
+  K = (x_ln2 + round_bias) - round_bias
 
   ! Cody-Waite split
   ! This decomposition preserves lower bits after integer cancellation.
@@ -97,6 +97,7 @@ elemental function exp_cr(x) result(a)
   !   better than x - K * LN2
   r = (x - K * LN2_HI) - K * LN2_LO
 
+  ! This is less accurate if abs(K) is large, but is faster
   !r = x - K * log(2._real64)
 
   ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
@@ -114,14 +115,20 @@ elemental function exp_cr(x) result(a)
   ! NOTE: This may create problems with Inf, NaN, and subnormals.
 
   ! Get the bitform of e
-  eb = transfer(e, 1_int64)
+  eb = transfer(e, int64_mold)
 
-  ! Extract the exponent (with bias)
-  ek = ibits(eb, expbit, explen)
+  ! Works, but int(K) is slow!
+  !*!! Extract the exponent (with bias)
+  !*!!ek = ibits(eb, expbit, explen)
 
-  ! Apply the descaled exponent
-  call mvbits(ek + int(K), 0, explen, eb, expbit)
+  !*!! Apply the descaled exponent
+  !*!!call mvbits(ek + int(K), 0, explen, eb, expbit)
 
+  ! Extract the integer-biased value of K
+  kb = transfer(K + round_bias, int64_mold)
+  eb = eb + shiftl(kb, expbit)
+
+  ! Back to float format
   a = transfer(eb, 1._real64)
 end function exp_cr
 

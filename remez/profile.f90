@@ -7,11 +7,10 @@ integer, parameter :: realq = merge(real128, real64, real128 > 0)
 
 integer, parameter :: niter = 20
 
-real(kind=real64), parameter :: xmax = 0.5 * log(2.)
+real(kind=real64), parameter :: xmax = 0.5 * log(2._real64)
 real(kind=realq), allocatable :: xq(:), rq(:)
 
 real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_t(:)
-real(kind=realq), parameter :: xqmax = 0.5 * log(2.)
 
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
@@ -22,8 +21,9 @@ n = 10000000
 allocate(x(n), r(n), re(n), r_cr(n), r_t(n))
 allocate(xq(n), rq(n))
 
+! NOTE: Using real64 to build the real128 x-points.  I think this is right?
 x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
-xq = [(-xqmax + (i - 1) * (2. * xqmax) / (n-1), i=1,n)]
+xq = real(x, real128)
 
 ! Reference realq values
 rq = exp(xq)
