@@ -77,6 +77,10 @@ elemental function exp_cr(x) result(a)
 
   real(kind=real64) :: s
 
+  ! Subnormals?
+  integer(int64) :: j, fb
+  real(real64)   :: f
+
   !$omp declare simd
 
   ! XXX: Use this to test performance without scaling.
@@ -116,25 +120,30 @@ elemental function exp_cr(x) result(a)
 
   ! Descale the value
 
-  ! This if-block prevents subnormal errors, but doubles the runtime.
-  ! TODO: Can I integrate subnormal support?
-	if (K >= -1020.0_real64 .and. K <= 1020.0_real64) then
-    ! Get the bitform of e.
-	  eb = transfer(e, int64_mold)
+  ! Over/underflow subnormal offset
+  ! TODO: Keep as real?
+  j = merge(1022_int64, 0_int64, K < -1020.0_real64) &
+      - merge(1022_int64, 0_int64, K >  1020.0_real64)
 
-    ! Shift K to the significand's least significant bits.
-    ! kb is now the integer value of K (excepting special IEEE values).
-	  kb = transfer(K + round_bias, int64_mold)
+  ! Get the bitform of e.
+  eb = transfer(e, int64_mold)
 
-    ! Apply the K exponent to e's exponent.
-	  eb = eb + shiftl(kb, expbit)
-	  a = transfer(eb, 1.0_real64)
-	else
-    a = scale(e, int(K))
-	endif
+  ! Shift K to the significand's least significant bits.
+  ! kb is now the integer value of K (with over/underflow correction).
+  kb = transfer((K + real(j, real64)) + round_bias, int64_mold)
 
-  ! NOTE: ieee_(positive|negative)_inf would be more portable, but they are
-  !   not defined as pure and cannot be used inside exp_cr().
+  ! Apply the K exponent to e's exponent.
+  eb = eb + shiftl(kb, expbit)
+  a  = transfer(eb, 1.0_real64)
+
+  ! Undo the over/underflow correction
+  fb = shiftl(1023_int64 - j, expbit)
+  f  = transfer(fb, 1.0_real64)
+
+  ! Apply rescaling if needed
+  a = a * f
+
+  ! TODO: These correct Inf values but do not account for incorrect signals.
 
   ! Set exp(-Inf) = 0.
   a = merge(0._real64, a, transfer(x, int64_mold) == z'FFF0000000000000')
