@@ -1,6 +1,15 @@
 use, intrinsic :: iso_fortran_env, only : real64, real128
 use, intrinsic :: ieee_arithmetic, only : ieee_value, ieee_quiet_nan
 use, intrinsic :: ieee_arithmetic, only : ieee_positive_inf, ieee_negative_inf
+
+use, intrinsic :: ieee_exceptions, only : ieee_set_flag, ieee_get_flag
+use, intrinsic :: ieee_exceptions, only : ieee_all
+use, intrinsic :: ieee_exceptions, only : ieee_invalid
+use, intrinsic :: ieee_exceptions, only : ieee_overflow
+use, intrinsic :: ieee_exceptions, only : ieee_underflow
+use, intrinsic :: ieee_exceptions, only : ieee_inexact
+use, intrinsic :: ieee_exceptions, only : ieee_divide_by_zero
+
 use exp_repro
 
 implicit none
@@ -18,15 +27,25 @@ integer :: count_rate, count_max, c1, c2
 real :: clock_rate
 
 integer :: i, j, n
-real(kind=real64) :: y, nan
+real(kind=real64) :: y, z
+
+! testing
+logical :: invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref
+logical :: invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
 
 n = 10000000
 allocate(x(n), r(n), re(n), r_cr(n), r_t(n))
 allocate(xq(n), rq(n))
 
-! NOTE: Using real64 to build the real128 x-points.  I think this is right?
+! Input range
+
+! Symmetric test
 x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
+
+! Just negative numbers
 !x = [(-xmax + (i - 1) * (1. * xmax) / (n-1), i=1,n)]
+
+! NOTE: Using real64 to build the real128 x-points.  I think this is right?
 xq = real(x, real128)
 
 ! Reference realq values
@@ -86,9 +105,43 @@ print '(a22,3(1x,ES25.17E3))', "+Inf:", &
 y = ieee_value(y, ieee_negative_inf)
 print '(a22,3(1x,ES25.17E3))', "-Inf:", &
   exp(ieee_value(0._real128, ieee_negative_inf)), exp(y), exp_cr(y)
-y = ieee_value(nan, ieee_quiet_nan)
+y = ieee_value(y, ieee_quiet_nan)
 print '(a22,3(1x,ES25.17E3))', "NaN:", &
   exp(ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_cr(y)
+
+!***
+
+! Exception test
+! TODO: Function?
+
+!y = ieee_value(y, ieee_positive_inf)
+y = -1000._real64
+
+call ieee_set_flag(ieee_all, .false.)
+z = exp(y)
+
+call ieee_get_flag(ieee_invalid, invalid_ref)
+call ieee_get_flag(ieee_overflow, overflow_ref)
+call ieee_get_flag(ieee_underflow, underflow_ref)
+call ieee_get_flag(ieee_inexact, inexact_ref)
+call ieee_get_flag(ieee_divide_by_zero, divzero_ref)
+
+call ieee_set_flag(ieee_all, .false.)
+z = exp_cr(y)
+
+call ieee_get_flag(ieee_invalid, invalid_cr)
+call ieee_get_flag(ieee_overflow, overflow_ref)
+call ieee_get_flag(ieee_underflow, underflow_ref)
+call ieee_get_flag(ieee_inexact, inexact_ref)
+call ieee_get_flag(ieee_divide_by_zero, divzero_ref)
+
+print *, "invalid: ", invalid_ref, invalid_cr
+print *, "overflow: ", overflow_ref, overflow_cr
+print *, "underflow: ", underflow_ref, underflow_cr
+print *, "inexact: ", inexact_ref, inexact_cr
+print *, "divzero: ", divzero_ref, divzero_cr
+
+call ieee_set_flag(ieee_all, .false.)
 
 !****
 
