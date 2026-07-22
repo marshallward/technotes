@@ -79,7 +79,6 @@ elemental function exp_cr(x) result(a)
 
   ! Subnormals?
   integer(int64) :: j, fb
-  real(real64)   :: f
 
   !$omp declare simd
 
@@ -123,25 +122,24 @@ elemental function exp_cr(x) result(a)
   ! Over/underflow subnormal offset
   ! TODO: Keep as real?
   j = merge(1022_int64, 0_int64, K < -1020.0_real64) &
-      - merge(1022_int64, 0_int64, K >  1020.0_real64)
+      - merge(1022_int64, 0_int64, K > 1020.0_real64)
 
   ! Get the bitform of e.
   eb = transfer(e, int64_mold)
 
   ! Shift K to the significand's least significant bits.
   ! kb is now the integer value of K (with over/underflow correction).
-  kb = transfer((K + real(j, real64)) + round_bias, int64_mold)
+  kb = transfer(K + round_bias, int64_mold)
 
   ! Apply the K exponent to e's exponent.
-  eb = eb + shiftl(kb, expbit)
+  eb = eb + shiftl(kb + j, expbit)
   a  = transfer(eb, 1.0_real64)
 
   ! Undo the over/underflow correction
   fb = shiftl(1023_int64 - j, expbit)
-  f  = transfer(fb, 1.0_real64)
 
   ! Apply rescaling if needed
-  a = a * f
+  a = a * transfer(fb, 1.0_real64)
 
   ! TODO: These correct Inf values but do not account for incorrect signals.
 
