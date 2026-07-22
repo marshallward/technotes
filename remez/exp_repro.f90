@@ -16,6 +16,12 @@ integer, parameter :: explen = storage_size(real64_mold) - digits(real64_mold)
 integer, parameter :: expbit = digits(real64_mold) - 1
   !< Position of lowest exponent bit
 
+! TODO: Portable versions?
+integer(int64), parameter :: pos_inf_bits = int(z'7FF0000000000000', int64)
+  !< IEEE 64-bit +Inf
+integer(int64), parameter :: neg_inf_bits = int(z'FFF0000000000000', int64)
+  !< IEEE 64-bit -Inf
+
 contains
 
 pure subroutine exp_1d(x, a)
@@ -113,8 +119,9 @@ elemental function exp_cr(x) result(a)
 
   ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
   !e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
-  e = exp_remez_estrin(r)
-  !e = exp_remez_estrin9(r)
+  !e = exp_remez_estrin_9(r)
+  !e = exp_remez_estrin_10(r)
+  e = exp_remez_estrin_11(r)
   !e = exp_taylor_horner(r)
   !e = exp_taylor_estrin(r)
 
@@ -146,11 +153,11 @@ elemental function exp_cr(x) result(a)
   ! TODO: These correct Inf values but do not account for incorrect signals.
 
   ! Set exp(-Inf) = 0.
-  a = merge(0._real64, a, transfer(x, int64_mold) == z'FFF0000000000000')
+  a = merge(0._real64, a, transfer(x, int64_mold) == neg_inf_bits)
 
   ! Set exp(+Inf) = +Inf
-  r = transfer(z'7FF0000000000000', real64_mold)
-  a = merge(r, a, transfer(x, int64_mold) == z'7FF0000000000000')
+  r = transfer(pos_inf_bits, real64_mold)
+  a = merge(r, a, transfer(x, int64_mold) == pos_inf_bits)
 end function exp_cr
 
 
@@ -209,7 +216,7 @@ pure function exp_remez_chebyshev(x) result(e)
 end function exp_remez_chebyshev
 
 
-pure function exp_remez_estrin(x) result(e)
+pure function exp_remez_estrin_10(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -251,10 +258,10 @@ pure function exp_remez_estrin(x) result(e)
   q1 = b2 + x2 * b3
 
   e = 1 + x * (q0 + x4 * q1 + x8 * (b4 + x2 * c(10)))
-end function exp_remez_estrin
+end function exp_remez_estrin_10
 
 
-pure function exp_remez_estrin9(x) result(e)
+pure function exp_remez_estrin_9(x) result(e)
   real(kind=real64), intent(in) :: x
     !< Input value
   real(kind=real64) :: e
@@ -294,7 +301,54 @@ pure function exp_remez_estrin9(x) result(e)
   t2_1 = t1_2
 
   e = 1. + x * (t2_0 + x8 * t2_1)
-end function exp_remez_estrin9
+end function exp_remez_estrin_9
+
+
+pure function exp_remez_estrin_11(x) result(e)
+  real(kind=real64), intent(in) :: x
+    !< Input value
+  real(kind=real64) :: e
+    !< Approximation of exp(x)
+
+  real(real64), parameter :: c(0:11) = [ &
+      9.99999999999999667e-01_real64, &
+      4.99999999999999500e-01_real64, &
+      1.66666666666674040e-01_real64, &
+      4.16666666667472874e-02_real64, &
+      8.33333333337431259e-03_real64, &
+      1.38888888534349124e-03_real64, &
+      1.98412691045814590e-04_real64, &
+      2.48016479357667924e-05_real64, &
+      2.75583751072956796e-06_real64, &
+      2.75099984928059077e-07_real64, &
+      2.46463609302820685e-08_real64, &
+      3.51693798509217157e-09_real64 &
+  ]
+
+  real(kind=real64) :: x2, x4, x8
+  real(kind=real64) :: a0, a1, a2, a3, a4, a5
+  real(kind=real64) :: b0, b1, b2
+  real(kind=real64) :: p
+
+  x2 = x * x
+  x4 = x2 * x2
+  x8 = x4 * x4
+
+  a0 = c(0)  + c(1) * x
+  a1 = c(2)  + c(3) * x
+  a2 = c(4)  + c(5) * x
+  a3 = c(6)  + c(7) * x
+  a4 = c(8)  + c(9) * x
+  a5 = c(10) + c(11) * x
+
+  b0 = a0 + a1 * x2
+  b1 = a2 + a3 * x2
+  b2 = a4 + a5 * x2
+
+  p = (b0 + b1 * x4) + b2 * x8
+
+  e = 1. + x * p
+end function exp_remez_estrin_11
 
 
 elemental function exp_taylor_horner(x) result(e)
