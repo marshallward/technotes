@@ -1,5 +1,6 @@
 use, intrinsic :: iso_fortran_env, only : real64, real128
 use, intrinsic :: ieee_arithmetic, only : ieee_value, ieee_quiet_nan
+use, intrinsic :: ieee_arithmetic, only : ieee_positive_inf, ieee_negative_inf
 use exp_repro
 
 implicit none
@@ -41,6 +42,8 @@ clock_rate = real(count_rate)
 
 print '(a22,3(1x,ES25.17E3))', "exp(0):", &
     exp(0._real128), exp(0._real64), exp_cr(0._real64)
+print '(a22,3(1x,ES25.17E3))', "exp(-0):", &
+    exp(-0._real128), exp(-0._real64), exp_cr(-0._real64)
 print '(a22,3(1x,ES25.17E3))', "exp(1):", &
     exp(1._real128), exp(1._real64), exp_cr(1._real64)
 print '(a22,3(1x,ES25.17E3))', "exp(0.33):", &
@@ -77,9 +80,15 @@ y = -1075.0_real64 * log(2.0_real64)
 print '(a22,3(1x,ES25.17E3))', "subnormal zero-cutoff", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 
+y = ieee_value(y, ieee_positive_inf)
+print '(a22,3(1x,ES25.17E3))', "+Inf:", &
+  exp(ieee_value(0._real128, ieee_positive_inf)), exp(y), exp_cr(y)
+y = ieee_value(y, ieee_negative_inf)
+print '(a22,3(1x,ES25.17E3))', "-Inf:", &
+  exp(ieee_value(0._real128, ieee_negative_inf)), exp(y), exp_cr(y)
 y = ieee_value(nan, ieee_quiet_nan)
 print '(a22,3(1x,ES25.17E3))', "NaN:", &
-  exp(ieee_value(y, ieee_quiet_nan)), exp(y), exp_cr(y)
+  exp(ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_cr(y)
 
 !****
 

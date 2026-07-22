@@ -79,10 +79,14 @@ elemental function exp_cr(x) result(a)
 
   !$omp declare simd
 
-  ! XXX: Use this for profiling without scaling.
+  ! XXX: Use this to test performance without scaling.
   !a = exp_remez_estrin(x)
 
   ! Scale to [-0.5 ln 2, 0.5 ln 2]
+
+  ! TODO: Use bins and tabled values to further reduce the range.
+  !   This may allow for equivalent accuracy from a lower-order polynomial, but
+  !   would also require an additional lookup (with integer conversion).
 
   x_ln2 = x * INV_LN2
 
@@ -90,13 +94,13 @@ elemental function exp_cr(x) result(a)
   ! NOTE: In x86 GCC, this favors vround instructions over round() calls.
   K = aint(x_ln2 + sign(0.5_real64, x_ln2))
 
-  ! TODO: This is faster but may be removed by optimization
+  ! TODO: This is slightly faster but may be removed by optimization
   !K = (x_ln2 + round_bias) - round_bias
 
   ! Cody-Waite split
   ! This decomposition preserves lower bits after integer cancellation.
   ! TODO: Explain this better
-  ! NOTE: This may be optimized to `x - K * (LN2_HI + L2_LI)` which is no
+  ! NOTE: Compilers may optimize this to `x - K * (LN2_HI + L2_LI)` which is no
   !   better than x - K * LN2
   r = (x - K * LN2_HI) - K * LN2_LO
 
@@ -112,6 +116,8 @@ elemental function exp_cr(x) result(a)
 
   ! Descale the value
 
+  ! This if-block prevents subnormal errors, but doubles the runtime.
+  ! TODO: Can I integrate subnormal support?
 	if (K >= -1020.0_real64 .and. K <= 1020.0_real64) then
     ! Get the bitform of e.
 	  eb = transfer(e, int64_mold)
@@ -124,9 +130,18 @@ elemental function exp_cr(x) result(a)
 	  eb = eb + shiftl(kb, expbit)
 	  a = transfer(eb, 1.0_real64)
 	else
-    ! For exceptional values, fallback to intrinsics for rescaling.
-		a = scale(e, int(K))
-	end if
+    a = scale(e, int(K))
+	endif
+
+  ! NOTE: ieee_(positive|negative)_inf would be more portable, but they are
+  !   not defined as pure and cannot be used inside exp_cr().
+
+  ! Set exp(-Inf) = 0.
+  a = merge(0._real64, a, transfer(x, int64_mold) == z'FFF0000000000000')
+
+  ! Set exp(+Inf) = +Inf
+  r = transfer(z'7FF0000000000000', real64_mold)
+  a = merge(r, a, transfer(x, int64_mold) == z'7FF0000000000000')
 end function exp_cr
 
 

@@ -6,7 +6,7 @@
 
 # ifx (Cray-wrapped)
 FC = ftn
-FCFLAGS = -g -O3 -qopenmp-simd -assume protect_parens -no-ftz
+FCFLAGS = -g -O3 -qopenmp-simd -assume protect_parens -ftz
 LD = ftn
 LDFLAGS =
 
