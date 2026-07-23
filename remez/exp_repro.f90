@@ -106,30 +106,6 @@ elemental function exp_cr(x) result(a)
 
   ! Scale to [-1/2N ln 2, +1/2N ln 2]
 
-  !**!! Crude implementation of anint(x_ln2).
-  !**!! NOTE: In x86 GCC, this favors vround instructions over round() calls.
-  !**!K = aint(x_ln2 + sign(0.5_real64, x_ln2))
-
-  !**!! TODO: This is slightly faster but may be removed by optimization
-  !**!!K = (x_ln2 + round_bias) - round_bias
-
-  !**!! Cody-Waite split
-  !**!! This decomposition preserves lower bits after integer cancellation.
-  !**!! TODO: Explain this better
-  !**!! NOTE: Compilers may optimize this to `x - K * (LN2_HI + L2_LI)` which is no
-  !**!!   better than x - K * LN2
-  !**!r = (x - K * LN2_HI) - K * LN2_LO
-
-  !**!! This is less accurate if abs(K) is large, but is faster
-  !**!!r = x - K * LN2
-
-  !**!! NOTE: Chebyshev polynomial is normalized to [-1,1] so we must rescale.
-  !**!!e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
-  !**!!e = exp_remez_estrin_9(r)
-  !**!e = exp_remez_estrin_10(r)
-  !**!!e = exp_remez_estrin_11(r)
-  !**!!e = exp_taylor_horner(r)
-  !**!!e = exp_taylor_estrin(r)
 
   ! *** Scale x to r = x - nint(N*x/ln2)
 
@@ -161,6 +137,15 @@ elemental function exp_cr(x) result(a)
   r = (x - Z * TABLE_LN2_HI) - Z * TABLE_LN2_LO
 
   ! *** Compute exp(r) ***!
+
+  ! Old ones
+  !**!! NOTE: Chebyshev polynomial is normalized to [-1,1] so we must rescale.
+  !**!!e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
+  !**!!e = exp_remez_estrin_9(r)
+  !**!e = exp_remez_estrin_10(r)
+  !**!!e = exp_remez_estrin_11(r)
+  !**!!e = exp_taylor_horner(r)
+  !**!!e = exp_taylor_estrin(r)
 
   ! Approximate exp(r), then restore the tabulated fractional power.
 
