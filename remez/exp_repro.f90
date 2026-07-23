@@ -1,6 +1,6 @@
 module exp_repro
 
-use, intrinsic :: iso_fortran_env, only : int64, real64, real128
+use, intrinsic :: iso_fortran_env, only : int32, int64, real64, real128
 
 implicit none
 
@@ -47,8 +47,9 @@ end subroutine exp_1d_do_c
 
 
 elemental function exp_cr(x) result(a)
+  !$omp declare simd
   !$acc routine seq
-  real(kind=real64), intent(in) :: x
+  real(kind=real64), value, intent(in) :: x
     !< Input value [nondim]
   real(kind=real64) :: a
     !< Exponential of x [nondim]
@@ -69,24 +70,36 @@ elemental function exp_cr(x) result(a)
   integer(kind=int64) :: ek
     ! Exponent of descaled exponent
 
-  ! TODO: Specify as hex to avoid ambiguous rounding
   real(kind=real64), parameter :: LN2 = 0.6931471805599453_real64
-  real(kind=real64), parameter :: INV_LN2 = 1.4426950408889634_real64
-  !real, parameter :: INV_LN2 = 1.44269504088896340735992468100189204
   real(kind=real64), parameter :: TWO_INV_LN2 = 2.8853900817779268_real64
-  !real, parameter :: TWO_INV_LN2 = 2.88539008177792681471984936200378409
-  real(kind=real64), parameter :: LN2_HI = 6.93147180369123816490e-01_real64
-  real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
 
   ! Experimental
   real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
 
-  real(kind=real64) :: s
-
   ! Subnormals?
   integer(int64) :: j, fb
 
-  !$omp declare simd
+  ! Even more experimental
+  real(kind=real64), parameter :: INV_LN2 = 1.4426950408889634_real64
+  real(kind=real64), parameter :: LN2_HI = 6.93147180369123816490e-01_real64
+  real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
+
+  ! Further subdivide [-(1/2N) ln2, +(1/2N) ln2], use tables to scale back up.
+  integer, parameter :: NTABLE = 1
+  real(kind=real64), parameter :: I_NTABLE = 1._real64 / real(NTABLE, real64)
+  real(kind=real64), parameter :: TABLE_INV_LN2 = NTABLE * INV_LN2
+  real(kind=real64), parameter :: TABLE_LN2_HI = I_NTABLE * LN2_HI
+  real(kind=real64), parameter :: TABLE_LN2_LO = I_NTABLE * LN2_LO
+
+  real(kind=real64) :: Z
+  integer(kind=int64) :: iz, kz
+  integer(int32) :: table_index
+
+  integer :: i
+  real(kind=real64), parameter :: exp2_table(0:NTABLE-1) = &
+      [(2._real64**(real(i, real64) / real(NTABLE, real64)), i=0,NTABLE-1)]
+
+  integer(int64), parameter :: low5_mask = int(NTABLE - 1, int64)
 
   ! XXX: Use this to test performance without scaling.
   !a = exp_remez_estrin(x)
@@ -97,34 +110,72 @@ elemental function exp_cr(x) result(a)
   !   This may allow for equivalent accuracy from a lower-order polynomial, but
   !   would also require an additional lookup (with integer conversion).
 
-  x_ln2 = x * INV_LN2
+  !**!x_ln2 = x * INV_LN2
 
-  ! Crude implementation of anint(x_ln2).
-  ! NOTE: In x86 GCC, this favors vround instructions over round() calls.
-  K = aint(x_ln2 + sign(0.5_real64, x_ln2))
+  !**!! Crude implementation of anint(x_ln2).
+  !**!! NOTE: In x86 GCC, this favors vround instructions over round() calls.
+  !**!K = aint(x_ln2 + sign(0.5_real64, x_ln2))
 
-  ! TODO: This is slightly faster but may be removed by optimization
-  !K = (x_ln2 + round_bias) - round_bias
+  !**!! TODO: This is slightly faster but may be removed by optimization
+  !**!!K = (x_ln2 + round_bias) - round_bias
 
-  ! Cody-Waite split
-  ! This decomposition preserves lower bits after integer cancellation.
-  ! TODO: Explain this better
+  !**!! Cody-Waite split
+  !**!! This decomposition preserves lower bits after integer cancellation.
+  !**!! TODO: Explain this better
+  !**!! NOTE: Compilers may optimize this to `x - K * (LN2_HI + L2_LI)` which is no
+  !**!!   better than x - K * LN2
+  !**!r = (x - K * LN2_HI) - K * LN2_LO
+
+  !**!! This is less accurate if abs(K) is large, but is faster
+  !**!!r = x - K * LN2
+
+  !**!! NOTE: Chebyshev polynomial is normalized to [-1,1] so we must rescale.
+  !**!!e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
+  !**!!e = exp_remez_estrin_9(r)
+  !**!e = exp_remez_estrin_10(r)
+  !**!!e = exp_remez_estrin_11(r)
+  !**!!e = exp_taylor_horner(r)
+  !**!!e = exp_taylor_estrin(r)
+
+  ! *** Scale x to r = x - nint(N*x/ln2)
+
+  ! Compute N*x/ln2
+  x_ln2 = x * TABLE_INV_LN2
+
+  ! Round to nearest integer
+
+  ! This is faster but more volatile to optimizations
+  Z = (x_ln2 + round_bias) - round_bias
+
+  ! This is a safer alternative.
+  !Z = aint(x_ln2 + sign(0.5_real64, x_ln2))
+
+  ! Decompose Z = 32*K + table_index
+
+  ! Recover the low five integer bits of Z.
+  iz = transfer(Z + round_bias, int64_mold)
+  table_index = iand(iz, low5_mask)
+
+  !K = (Z - real(table_index, real64)) * 0.03125_real64
+  kz = iand(iz, not(low5_mask))
+  K = (transfer(kz, real64_mold) - round_bias) * I_NTABLE
+
+  ! Cody-Waite splitting
+  ! Residual after subtracting Z*ln(2)/32
   ! NOTE: Compilers may optimize this to `x - K * (LN2_HI + L2_LI)` which is no
   !   better than x - K * LN2
-  r = (x - K * LN2_HI) - K * LN2_LO
+  r = (x - Z * TABLE_LN2_HI) - Z * TABLE_LN2_LO
 
-  ! This is less accurate if abs(K) is large, but is faster
-  !r = x - K * LN2
+  ! *** Compute exp(r) ***!
 
-  ! NOTE: Chebyshev polynomial is normalized to [-1,1] so we have to rescale.
-  !e = 1. + r * exp_remez_chebyshev(r * TWO_INV_LN2)
-  !e = exp_remez_estrin_9(r)
-  !e = exp_remez_estrin_10(r)
-  e = exp_remez_estrin_11(r)
-  !e = exp_taylor_horner(r)
-  !e = exp_taylor_estrin(r)
+  ! Approximate exp(r), then restore the tabulated fractional power.
+  !e = exp2_table(table_index) * exp_remez_estrin_4(r)
+  !e = exp2_table(table_index) * exp_remez_estrin_5(r)
+  !e = exp2_table(table_index) * exp_taylor_estrin_6(r)
 
-  ! Descale the value
+  e = exp2_table(table_index) * exp_remez_estrin_10(r)
+
+  ! *** Descale the value ***!
 
   ! Over/underflow subnormal offset
   ! TODO: Keep as real?
@@ -147,6 +198,8 @@ elemental function exp_cr(x) result(a)
 
   ! Apply rescaling if needed
   a = a * transfer(fb, 1.0_real64)
+
+  !*** IEEE corrections ***!
 
   ! TODO: These correct Inf values but do not account for incorrect signals.
 
@@ -212,6 +265,68 @@ pure function exp_remez_chebyshev(x) result(e)
 
   e = t(0) + x * b1 - b2
 end function exp_remez_chebyshev
+
+
+! NOTE: Reduced range: +/- 1/64 ln2
+pure function exp_remez_estrin_4(x) result(e)
+  real(real64), intent(in) :: x
+    !< Reduced argument
+  real(real64) :: e
+    !< Approximation of exp(x)
+
+  real(real64), parameter :: c(0:4) = [ &
+    9.99999999999999889e-01_real64, &
+    4.99999999995007050e-01_real64, &
+    1.66666666671947628e-01_real64, &
+    4.16668555121924925e-02_real64, &
+    8.33331131811317072e-03_real64 ]
+
+  real(real64) :: x2, x4
+  real(real64) :: a0, a1
+  real(real64) :: p
+
+  x2 = x * x
+  x4 = x2 * x2
+
+  a0 = c(0) + x * c(1)
+  a1 = c(2) + x * c(3)
+
+  p = (a0 + x2 * a1) + x4 * c(4)
+
+  e = 1.0_real64 + x * p
+end function exp_remez_estrin_4
+
+
+! NOTE: Reduced range: +/- 1/64 ln2
+pure function exp_remez_estrin_5(x) result(e)
+  real(real64), intent(in) :: x
+    !< Reduced argument
+  real(real64) :: e
+    !< Approximation of exp(x)
+
+  real(real64), parameter :: c(0:5) = [ &
+    9.99999999999999778e-01_real64, &
+    5.00000000000007438e-01_real64, &
+    1.66666666662346141e-01_real64, &
+    4.16666663113674576e-02_real64, &
+    8.33338618897187799e-03_real64, &
+    1.39156572960508467e-03_real64 ]
+
+  real(real64) :: x2, x4
+  real(real64) :: a0, a1, a2
+  real(real64) :: p
+
+  x2 = x * x
+  x4 = x2 * x2
+
+  a0 = c(0) + x * c(1)
+  a1 = c(2) + x * c(3)
+  a2 = c(4) + x * c(5)
+
+  p = (a0 + x2 * a1) + x4 * a2
+
+  e = 1.0_real64 + x * p
+end function exp_remez_estrin_5
 
 
 pure function exp_remez_estrin_10(x) result(e)
@@ -379,6 +494,25 @@ elemental function exp_taylor_horner(x) result(e)
     e = x * e + c(n)
   enddo
 end function exp_taylor_horner
+
+
+pure function exp_taylor_estrin_6(x) result(e)
+  real(real64), intent(in) :: x
+  real(real64) :: e
+  real(real64) :: x2, x4
+  real(real64) :: p0, p1, p2
+
+  x2 = x * x
+  x4 = x2 * x2
+
+  p0 = 1.0_real64 + x
+  p1 = 0.5_real64 + x * (1.0_real64 / 6.0_real64)
+  p2 = (1.0_real64 / 24.0_real64) + &
+       x * (1.0_real64 / 120.0_real64)
+
+  e = (p0 + x2 * p1) + &
+      x4 * (p2 + x2 * (1.0_real64 / 720.0_real64))
+end function exp_taylor_estrin_6
 
 
 elemental function exp_taylor_estrin(x) result(e)
