@@ -99,18 +99,13 @@ elemental function exp_cr(x) result(a)
   real(kind=real64), parameter :: exp2_table(0:NTABLE-1) = &
       [(2._real64**(real(i, real64) / real(NTABLE, real64)), i=0,NTABLE-1)]
 
-  integer(int64), parameter :: low5_mask = int(NTABLE - 1, int64)
+  integer(int64), parameter :: index_mask = int(NTABLE - 1, int64)
 
   ! XXX: Use this to test performance without scaling.
-  !a = exp_remez_estrin(x)
+  !a = exp_remez_estrin_5(x)
+  !return
 
-  ! Scale to [-0.5 ln 2, 0.5 ln 2]
-
-  ! TODO: Use bins and tabled values to further reduce the range.
-  !   This may allow for equivalent accuracy from a lower-order polynomial, but
-  !   would also require an additional lookup (with integer conversion).
-
-  !**!x_ln2 = x * INV_LN2
+  ! Scale to [-1/2N ln 2, +1/2N ln 2]
 
   !**!! Crude implementation of anint(x_ln2).
   !**!! NOTE: In x86 GCC, this favors vround instructions over round() calls.
@@ -142,28 +137,28 @@ elemental function exp_cr(x) result(a)
   ! Compute N*x/ln2
   x_ln2 = x * TABLE_INV_LN2
 
-  ! Round to nearest integer
+  ! Round to nearest integer: Z = nint(x_ln2)
 
-  ! This is faster but more volatile to optimizations
+  ! NOTE: This is fast but may be reduced to Z = x_ln2
   Z = (x_ln2 + round_bias) - round_bias
 
-  ! This is a safer alternative.
+  ! This is a safer alternative
   !Z = aint(x_ln2 + sign(0.5_real64, x_ln2))
 
-  ! Decompose Z = 32*K + table_index
+  ! Decompose Z = N * K + table_index, where K = nint(x / ln2)
 
-  ! Recover the low five integer bits of Z.
+  ! Extract the lower bits of Z to determine the subscale
   iz = transfer(Z + round_bias, int64_mold)
-  table_index = iand(iz, low5_mask)
+  table_index = iand(iz, index_mask)
 
   !K = (Z - real(table_index, real64)) * 0.03125_real64
-  kz = iand(iz, not(low5_mask))
+  kz = iand(iz, not(index_mask))
   K = (transfer(kz, real64_mold) - round_bias) * I_NTABLE
 
   ! Cody-Waite splitting
   ! Residual after subtracting Z*ln(2)/32
-  ! NOTE: Compilers may optimize this to `x - K * (LN2_HI + L2_LI)` which is no
-  !   better than x - K * LN2
+  ! NOTE: May be reduced to `x - K * (TABLE_LN2_HI + TABLE_L2_LO)` which is no
+  !   better than x - Z * TABLE_LN2
   r = (x - Z * TABLE_LN2_HI) - Z * TABLE_LN2_LO
 
   ! *** Compute exp(r) ***!
@@ -171,9 +166,10 @@ elemental function exp_cr(x) result(a)
   ! Approximate exp(r), then restore the tabulated fractional power.
   !e = exp2_table(table_index) * exp_remez_estrin_4(r)
   !e = exp2_table(table_index) * exp_remez_estrin_5(r)
-  !e = exp2_table(table_index) * exp_taylor_estrin_6(r)
 
   e = exp2_table(table_index) * exp_remez_estrin_10(r)
+
+  !e = exp2_table(table_index) * exp_taylor_estrin_6(r)
 
   ! *** Descale the value ***!
 
