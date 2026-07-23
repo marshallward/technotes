@@ -163,10 +163,15 @@ elemental function exp_cr(x) result(a)
   ! *** Compute exp(r) ***!
 
   ! Approximate exp(r), then restore the tabulated fractional power.
+
+  ! Use these for N=32
   !e = exp2_table(table_index) * exp_remez_estrin_4(r)
   !e = exp2_table(table_index) * exp_remez_estrin_5(r)
+
+  ! Use with N=1
   e = exp2_table(table_index) * exp_remez_estrin_10(r)
 
+  ! Taylor functions are range-agnostic (i.e. only good near zero!)
   !e = exp2_table(table_index) * exp_taylor_estrin_6(r)
 
   ! *** Descale the value ***!

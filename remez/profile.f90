@@ -148,14 +148,12 @@ call ieee_set_flag(ieee_all, .false.)
 ! Intrinsic exp()
 ! Use the same explicit inner loop shape as exp_cr() so the timing compares
 ! function cost rather than array-assignment lowering choices.
-do j = 1, size(x)
-  re(j) = exp(x(j))
+do i = 1,3
+  re = exp(x)
 enddo
 call system_clock(count=c1)
 do i = 1, niter
-  do j = 1, size(x)
-    re(j) = exp(x(j))
-  enddo
+  re = exp(x)
 end do
 call system_clock(count=c2)
 
@@ -170,14 +168,12 @@ print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
 !****
 
 ! Elemental Remez+Estrin version
-do j = 1, size(x)
-  r_cr(j) = exp_cr(x(j))
-enddo
+do i = 1,3
+  r_cr = exp_cr(x)
+end do
 call system_clock(count=c1)
 do i = 1, niter
-  do j = 1, size(x)
-    r_cr(j) = exp_cr(x(j))
-  enddo
+  r_cr = exp_cr(x)
 end do
 call system_clock(count=c2)
 
