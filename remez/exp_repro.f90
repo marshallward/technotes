@@ -47,7 +47,6 @@ end subroutine exp_1d_do_c
 
 
 elemental function exp_cr(x) result(a)
-  !$omp declare simd
   !$acc routine seq
   real(kind=real64), value, intent(in) :: x
     !< Input value [nondim]
@@ -166,7 +165,6 @@ elemental function exp_cr(x) result(a)
   ! Approximate exp(r), then restore the tabulated fractional power.
   !e = exp2_table(table_index) * exp_remez_estrin_4(r)
   !e = exp2_table(table_index) * exp_remez_estrin_5(r)
-
   e = exp2_table(table_index) * exp_remez_estrin_10(r)
 
   !e = exp2_table(table_index) * exp_taylor_estrin_6(r)
@@ -209,7 +207,6 @@ end function exp_cr
 
 
 elemental function exp_cr_fast(x) result(a)
-  !$omp declare simd
   !$acc routine seq
   real(kind=real64), value, intent(in) :: x
     !< Input value [nondim]
@@ -318,7 +315,7 @@ pure function exp_remez_chebyshev(x) result(e)
 end function exp_remez_chebyshev
 
 
-! NOTE: Reduced range: +/- 1/64 ln2
+! NOTE: Reduced range: +/- 1/32 0.5 ln2
 pure function exp_remez_estrin_4(x) result(e)
   real(real64), intent(in) :: x
     !< Reduced argument
@@ -348,7 +345,7 @@ pure function exp_remez_estrin_4(x) result(e)
 end function exp_remez_estrin_4
 
 
-! NOTE: Reduced range: +/- 1/64 ln2
+! NOTE: Reduced range: +/- 1/32 0.5 ln2
 pure function exp_remez_estrin_5(x) result(e)
   real(real64), intent(in) :: x
     !< Reduced argument

@@ -1,18 +1,18 @@
-# GCC
-FC = gfortran
-FCFLAGS = -g -O3 \
-  -mavx -mfma -march=native \
-  -flto --param early-inlining-insns=64 \
-  -fopt-info-inline-all=inline.log \
-  -fno-range-check
-LD = gfortran
-LDFLAGS = -flto
+## GCC
+#FC = gfortran
+#FCFLAGS = -g -O3 \
+#  -mavx -mfma -march=native \
+#  -flto --param early-inlining-insns=64 \
+#  -fopt-info-inline-all=inline.log \
+#  -fno-range-check
+#LD = gfortran
+#LDFLAGS = -flto
 
-## ifx (Cray-wrapped)
-#FC = ftn
-#FCFLAGS = -g -O3 -qopenmp-simd -assume protect_parens -ftz
-#LD = ftn
-#LDFLAGS =
+# ifx (Cray-wrapped)
+FC = ftn
+FCFLAGS = -g -O3 -ipo -assume protect_parens
+LD = ftn
+LDFLAGS = -ipo
 
 ## NVHPC
 #FC = nvfortran

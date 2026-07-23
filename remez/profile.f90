@@ -21,7 +21,7 @@ integer, parameter :: niter = 20
 real(kind=real64), parameter :: xmax = 0.5 * log(2._real64)
 
 real(kind=realq), allocatable :: xq(:), rq(:)
-real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_fast(:), r_t(:)
+real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_fast(:)
 
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
@@ -34,7 +34,7 @@ logical :: invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref
 logical :: invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
 
 n = 10000000
-allocate(x(n), r(n), re(n), r_cr(n), r_fast(n), r_t(n))
+allocate(x(n), r(n), re(n), r_cr(n), r_fast(n))
 allocate(xq(n), rq(n))
 
 ! Input range
@@ -148,13 +148,11 @@ call ieee_set_flag(ieee_all, .false.)
 ! Intrinsic exp()
 ! Use the same explicit inner loop shape as exp_cr() so the timing compares
 ! function cost rather than array-assignment lowering choices.
-!$omp simd
 do j = 1, size(x)
   re(j) = exp(x(j))
 enddo
 call system_clock(count=c1)
 do i = 1, niter
-  !$omp simd
   do j = 1, size(x)
     re(j) = exp(x(j))
   enddo
@@ -172,13 +170,11 @@ print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
 !****
 
 ! Elemental Remez+Estrin version
-!$omp simd
 do j = 1, size(x)
   r_cr(j) = exp_cr(x(j))
 enddo
 call system_clock(count=c1)
 do i = 1, niter
-  !$omp simd
   do j = 1, size(x)
     r_cr(j) = exp_cr(x(j))
   enddo
@@ -197,13 +193,11 @@ print '(a26,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
 !****
 
 ! Fast finite-normal Remez+Estrin version
-!$omp simd
 do j = 1, size(x)
   r_fast(j) = exp_cr_fast(x(j))
 enddo
 call system_clock(count=c1)
 do i = 1, niter
-  !$omp simd
   do j = 1, size(x)
     r_fast(j) = exp_cr_fast(x(j))
   enddo
