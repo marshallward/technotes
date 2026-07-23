@@ -84,7 +84,7 @@ elemental function exp_cr(x) result(a)
   real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
 
   ! Further subdivide [-(1/2N) ln2, +(1/2N) ln2], use tables to scale back up.
-  integer, parameter :: NTABLE = 1
+  integer, parameter :: NTABLE = 32
   real(kind=real64), parameter :: I_NTABLE = 1._real64 / real(NTABLE, real64)
   real(kind=real64), parameter :: TABLE_INV_LN2 = NTABLE * INV_LN2
   real(kind=real64), parameter :: TABLE_LN2_HI = I_NTABLE * LN2_HI
@@ -164,14 +164,22 @@ elemental function exp_cr(x) result(a)
 
   ! Approximate exp(r), then restore the tabulated fractional power.
 
+  ! Use with N=1
+  !e = exp2_table(table_index) * exp_remez_estrin_10(r)
+
   ! Use these for N=32
   !e = exp2_table(table_index) * exp_remez_estrin_4(r)
-  !e = exp2_table(table_index) * exp_remez_estrin_5(r)
+  e = exp2_table(table_index) * exp_remez_estrin_5(r)
 
-  ! Use with N=1
-  e = exp2_table(table_index) * exp_remez_estrin_10(r)
+  ! N = 512?
+  !e = exp2_table(table_index) * exp_remez_estrin_3(r)
+
+  ! N = 2048
+  !e = exp2_table(table_index) * exp_remez_estrin_2(r)
 
   ! Taylor functions are range-agnostic (i.e. only good near zero!)
+  !e = exp2_table(table_index) * exp_taylor_estrin_2(r)
+  !e = exp2_table(table_index) * exp_taylor_estrin_3(r)
   !e = exp2_table(table_index) * exp_taylor_estrin_6(r)
 
   ! *** Descale the value ***!
@@ -318,6 +326,54 @@ pure function exp_remez_chebyshev(x) result(e)
 
   e = t(0) + x * b1 - b2
 end function exp_remez_chebyshev
+
+
+! NOTE: Reduced range: +/- 1/32 0.5 ln2
+pure function exp_remez_estrin_2(x) result(e)
+  real(real64), intent(in) :: x
+    !< Reduced argument
+  real(real64) :: e
+    !< Approximation of exp(x)
+
+  real(real64), parameter :: c(0:2) = [ &
+    1.00000000000000022e+00_real64, &
+    5.00000000895551633e-01_real64, &
+    1.66666653573179918e-01_real64 ]
+
+  real(real64) :: p
+
+  p = c(0) + x * (c(1) + x * c(2))
+
+  e = 1.0_real64 + x * p
+end function exp_remez_estrin_2
+
+
+! NOTE: Reduced range: +/- 1/32 0.5 ln2
+pure function exp_remez_estrin_3(x) result(e)
+  real(real64), intent(in) :: x
+    !< Reduced argument
+  real(real64) :: e
+    !< Approximation of exp(x)
+
+  real(real64), parameter :: c(0:3) = [ &
+    9.99999999999999889e-01_real64, &
+    4.99999999999874767e-01_real64, &
+    1.66666670331381772e-01_real64, &
+    4.16669212514809706e-02_real64 ]
+
+  real(real64) :: x2
+  real(real64) :: a0, a1
+  real(real64) :: p
+
+  x2 = x * x
+
+  a0 = c(0) + x * c(1)
+  a1 = c(2) + x * c(3)
+
+  p = a0 + x2 * a1
+
+  e = 1.0_real64 + x * p
+end function exp_remez_estrin_3
 
 
 ! NOTE: Reduced range: +/- 1/32 0.5 ln2
@@ -547,6 +603,28 @@ elemental function exp_taylor_horner(x) result(e)
     e = x * e + c(n)
   enddo
 end function exp_taylor_horner
+
+
+pure function exp_taylor_estrin_2(x) result(e)
+  real(real64), intent(in) :: x
+  real(real64) :: e
+
+  e = 1.0_real64 + x + x * x * 0.5_real64
+end function exp_taylor_estrin_2
+
+
+pure function exp_taylor_estrin_3(x) result(e)
+  real(real64), intent(in) :: x
+  real(real64) :: e
+  real(real64) :: x2, p0, p1
+
+  x2 = x * x
+
+  p0 = 1.0_real64 + x
+  p1 = 0.5_real64 + x * (1.0_real64 / 6.0_real64)
+
+  e = p0 + x2 * p1
+end function exp_taylor_estrin_3
 
 
 pure function exp_taylor_estrin_6(x) result(e)
