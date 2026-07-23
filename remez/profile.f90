@@ -27,11 +27,7 @@ integer :: count_rate, count_max, c1, c2
 real :: clock_rate
 
 integer :: i, j, n
-real(kind=real64) :: y, z
-
-! testing
-logical :: invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref
-logical :: invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
+real(kind=real64) :: y
 
 n = 10000000
 allocate(x(n), r(n), re(n), r_cr(n), r_fast(n))
@@ -108,38 +104,25 @@ print '(a26,3(1x,ES25.17E3))', "-Inf:", &
 y = ieee_value(y, ieee_quiet_nan)
 print '(a26,3(1x,ES25.17E3))', "NaN:", &
   exp(ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_cr(y)
+y = -ieee_value(y, ieee_quiet_nan)
+print '(a26,3(1x,ES25.17E3))', "-NaN:", &
+  exp(-ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_cr(y)
 
 !***
 
-! Exception test
-! TODO: Function?
-
-!y = ieee_value(y, ieee_positive_inf)
-y = -1000._real64
-
-call ieee_set_flag(ieee_all, .false.)
-z = exp(y)
-
-call ieee_get_flag(ieee_invalid, invalid_ref)
-call ieee_get_flag(ieee_overflow, overflow_ref)
-call ieee_get_flag(ieee_underflow, underflow_ref)
-call ieee_get_flag(ieee_inexact, inexact_ref)
-call ieee_get_flag(ieee_divide_by_zero, divzero_ref)
-
-call ieee_set_flag(ieee_all, .false.)
-z = exp_cr(y)
-
-call ieee_get_flag(ieee_invalid, invalid_cr)
-call ieee_get_flag(ieee_overflow, overflow_ref)
-call ieee_get_flag(ieee_underflow, underflow_ref)
-call ieee_get_flag(ieee_inexact, inexact_ref)
-call ieee_get_flag(ieee_divide_by_zero, divzero_ref)
-
-print *, "invalid: ", invalid_ref, invalid_cr
-print *, "overflow: ", overflow_ref, overflow_cr
-print *, "underflow: ", underflow_ref, underflow_cr
-print *, "inexact: ", inexact_ref, inexact_cr
-print *, "divzero: ", divzero_ref, divzero_cr
+! Exception flag reports.  Columns are: invalid, overflow, underflow,
+! inexact, divide-by-zero.
+print '(a26,2(1x,a15))', "IEEE flags:", "exp()", "exp_cr()"
+print '(a26,2(1x,a15))', "flag order:", "I  O  U  X  Z", "I  O  U  X  Z"
+call print_exception_flags("normal:", 0.33_real64)
+call print_exception_flags("overflow:", 1000.0_real64)
+call print_exception_flags("underflow:", -1000.0_real64)
+call print_exception_flags("largest float:", log(huge(1.0_real64)))
+call print_exception_flags("smallest normal:", log(tiny(1.0_real64)))
+call print_exception_flags("+Inf:", ieee_value(0.0_real64, ieee_positive_inf))
+call print_exception_flags("-Inf:", ieee_value(0.0_real64, ieee_negative_inf))
+call print_exception_flags("NaN:", ieee_value(0.0_real64, ieee_quiet_nan))
+call print_exception_flags("-NaN:", -ieee_value(0.0_real64, ieee_quiet_nan))
 
 call ieee_set_flag(ieee_all, .false.)
 
@@ -272,5 +255,36 @@ print '(a26,1x,g0)', "r - exp_cr():", maxval(abs((r_fast - r_cr) / r_cr))
 !*!print '(a26,1x,g0)', "exp_taylor loop() time:", (c2 - c1) / clock_rate / niter
 !*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
 !*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_t))
+
+contains
+
+subroutine print_exception_flags(label, x0)
+  character(len=*), intent(in) :: label
+  real(kind=real64), intent(in) :: x0
+
+  real(kind=real64), volatile :: z
+  logical :: invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref
+  logical :: invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
+
+  call ieee_set_flag(ieee_all, .false.)
+  z = exp(x0)
+  call ieee_get_flag(ieee_invalid, invalid_ref)
+  call ieee_get_flag(ieee_overflow, overflow_ref)
+  call ieee_get_flag(ieee_underflow, underflow_ref)
+  call ieee_get_flag(ieee_inexact, inexact_ref)
+  call ieee_get_flag(ieee_divide_by_zero, divzero_ref)
+
+  call ieee_set_flag(ieee_all, .false.)
+  z = exp_cr(x0)
+  call ieee_get_flag(ieee_invalid, invalid_cr)
+  call ieee_get_flag(ieee_overflow, overflow_cr)
+  call ieee_get_flag(ieee_underflow, underflow_cr)
+  call ieee_get_flag(ieee_inexact, inexact_cr)
+  call ieee_get_flag(ieee_divide_by_zero, divzero_cr)
+
+  print '(a26,2(1x,5l3))', label, &
+      invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref, &
+      invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
+end subroutine print_exception_flags
 
 end
