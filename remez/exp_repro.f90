@@ -84,7 +84,7 @@ elemental function exp_cr(x) result(a)
   real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
 
   ! Further subdivide [-(1/2N) ln2, +(1/2N) ln2], use tables to scale back up.
-  integer, parameter :: NTABLE = 32
+  integer, parameter :: NTABLE = 1
   real(kind=real64), parameter :: I_NTABLE = 1._real64 / real(NTABLE, real64)
   real(kind=real64), parameter :: TABLE_INV_LN2 = NTABLE * INV_LN2
   real(kind=real64), parameter :: TABLE_LN2_HI = I_NTABLE * LN2_HI
@@ -100,14 +100,31 @@ elemental function exp_cr(x) result(a)
 
   integer(int64), parameter :: index_mask = int(NTABLE - 1, int64)
 
+  logical :: is_inf
+  integer(int64) :: xb
+
   ! XXX: Use this to test performance without scaling.
   !a = exp_remez_estrin_5(x)
   !return
 
-  ! Scale to [-1/2N ln 2, +1/2N ln 2]
+  ! *** Early Inf handler
 
+  xb = transfer(x, int64_mold)
+  is_inf = merge(.true., .false., iand(xb, z'7FFFFFFFFFFFFFFF') == pos_inf_bits)
 
-  ! *** Scale x to r = x - nint(N*x/ln2)
+  ! exp(-Inf) = 0
+  a = merge(0._real64, a, transfer(x, int64_mold) == neg_inf_bits)
+
+  ! exp(+Inf) = +Inf
+  r = transfer(pos_inf_bits, real64_mold)
+  a = merge(r, a, transfer(x, int64_mold) == pos_inf_bits)
+
+  ! Exit early to avoid false signals (and maybe performance)
+  if (is_inf) return
+
+  ! *** Scale to [-1/2N ln 2, +1/2N ln 2]
+
+  ! Rescale from x to r = x - nint(N*x/ln2)
 
   ! Compute N*x/ln2
   x_ln2 = x * TABLE_INV_LN2
@@ -150,11 +167,12 @@ elemental function exp_cr(x) result(a)
   ! Approximate exp(r), then restore the tabulated fractional power.
 
   ! Use with N=1
-  !e = exp2_table(table_index) * exp_remez_estrin_10(r)
+  e = exp2_table(table_index) * exp_remez_estrin_10(r)
+  !e = exp_remez_estrin_10(r)
 
   ! Use these for N=32
   !e = exp2_table(table_index) * exp_remez_estrin_4(r)
-  e = exp2_table(table_index) * exp_remez_estrin_5(r)
+  !e = exp2_table(table_index) * exp_remez_estrin_5(r)
 
   ! N = 512?
   !e = exp2_table(table_index) * exp_remez_estrin_3(r)
@@ -190,17 +208,6 @@ elemental function exp_cr(x) result(a)
 
   ! Apply rescaling if needed
   a = a * transfer(fb, 1.0_real64)
-
-  !*** IEEE corrections ***!
-
-  ! TODO: These correct Inf values but do not account for incorrect signals.
-
-  ! Set exp(-Inf) = 0.
-  a = merge(0._real64, a, transfer(x, int64_mold) == neg_inf_bits)
-
-  ! Set exp(+Inf) = +Inf
-  r = transfer(pos_inf_bits, real64_mold)
-  a = merge(r, a, transfer(x, int64_mold) == pos_inf_bits)
 end function exp_cr
 
 
