@@ -10,7 +10,8 @@
 
 # ifx (Cray-wrapped)
 FC = ftn
-FCFLAGS = -g -O3 -ipo -assume protect_parens
+FCFLAGS = -g -O3 -ipo
+FCFLAGS += -assume protect_parens
 LD = ftn
 LDFLAGS = -ipo
 
@@ -22,15 +23,18 @@ LDFLAGS = -ipo
 
 all: runexp
 
-runexp: exp_repro.o profile.o
+runexp: exp_dev.o exp_cr.o profile.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
-exp_repro.o: exp_repro.f90
+exp_dev.o: exp_dev.f90
 	$(FC) $(FCFLAGS) -c $<
 
-profile.o: profile.f90
+exp_cr.o: exp_cr.f90
+	$(FC) $(FCFLAGS) -c $<
+
+profile.o: profile.f90 exp_dev.o exp_cr.o
 	$(FC) $(FCFLAGS) -c $<
 
 .PHONY: clean
 clean:
-	rm -f exp_repro.o exp_repro.mod profile.o runexp
+	rm -f exp_dev.o exp_dev.mod exp_cr.o exp_cr_mod.mod profile.o runexp
