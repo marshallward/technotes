@@ -71,10 +71,12 @@ print '(a26,3(1x,ES25.17E3))', "exp(.322541412664843):", &
 
 ! Extreme values
 
+y = 1000._real64
 print '(a26,3(1x,ES25.17E3))', "overflow: exp(1000):", &
-    exp(1000._real128), exp(1000._real64), exp_cr(1000._real64)
+    exp(1000._real128), exp(y), exp_cr(y)
+y = -1000._real64
 print '(a26,3(1x,ES25.17E3))', "underflow exp(-1000):", &
-    exp(-1000._real128), exp(-1000._real64), exp_cr(-1000._real64)
+    exp(-1000._real128), exp(y), exp_cr(y)
 
 ! Special values
 
