@@ -5,7 +5,7 @@
 !! behavior (overflow, underflow, inexact) with the intrinsic exp().
 !!
 !! Performance is approximately 1.17x Intel SVML with full IEEE compliance.
-module exp_cr_mod
+module exp_repro_mod
 
 use, intrinsic :: iso_fortran_env, only : int64, real64
 
@@ -16,6 +16,7 @@ public :: exp_repro
 
 ! Scalar mold for transfer()
 integer(kind=int64), parameter :: int64_mold = 0
+real(kind=real64), parameter :: real64_mold = 0.
 
 ! IEEE 754 double precision layout
 integer, parameter :: expbit = digits(1._real64) - 1
@@ -64,7 +65,7 @@ elemental function exp_repro(x) result(a)
   real(kind=real64), parameter :: LN2_HI = 6.93147180369123816490e-01_real64
   real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
 
-  real(kind=real64) :: x_ln2, Z
+  real(kind=real64) :: x_ln2
 
   logical :: is_inf
 
@@ -76,7 +77,7 @@ elemental function exp_repro(x) result(a)
 
   if (is_inf) then
     ! exp(-Inf) = 0, exp(+Inf) = +Inf
-    a = merge(0._real64, transfer(pos_inf_bits, 1._real64), xb == neg_inf_bits)
+    a = merge(0._real64, transfer(pos_inf_bits, real64_mold), xb == neg_inf_bits)
     return
   end if
 
@@ -84,11 +85,10 @@ elemental function exp_repro(x) result(a)
   ! Compute K = nint(x / ln2), r = x - K*ln2
 
   x_ln2 = x * INV_LN2
-  Z = (x_ln2 + round_bias) - round_bias    ! Z = nint(x_ln2)
-  K = Z
+  K = (x_ln2 + round_bias) - round_bias    ! K = nint(x_ln2)
 
-  ! Cody-Waite: r = x - Z*ln2 with extended precision
-  r = (x - Z * LN2_HI) - Z * LN2_LO
+  ! Cody-Waite: r = x - K*ln2 with extended precision
+  r = (x - K * LN2_HI) - K * LN2_LO
 
   ! *** Polynomial approximation ***
   ! exp(r) for r in [-ln2/2, ln2/2] using degree-10 Remez minimax polynomial
@@ -106,11 +106,11 @@ elemental function exp_repro(x) result(a)
   kb = transfer(K + round_bias, int64_mold)
 
   eb = eb + shiftl(kb + j, expbit)
-  a = transfer(eb, 1.0_real64)
+  a = transfer(eb, real64_mold)
 
   ! Apply correction factor for extreme K (triggers IEEE over/underflow signals)
   fb = shiftl(1023_int64 - j, expbit)
-  a = a * transfer(fb, 1.0_real64)
+  a = a * transfer(fb, real64_mold)
 end function exp_repro
 
 
@@ -161,4 +161,4 @@ pure function exp_remez_estrin_10(x) result(e)
   e = 1 + x * (q0 + x4 * q1 + x8 * (b4 + x2 * c(10)))
 end function exp_remez_estrin_10
 
-end module exp_cr_mod
+end module exp_repro_mod

@@ -23,18 +23,18 @@ LDFLAGS = -ipo
 
 all: runexp
 
-runexp: exp_dev.o exp_cr.o profile.o
+runexp: exp_dev.o exp_repro.o profile.o
 	$(LD) $(LDFLAGS) -o $@ $^
 
 exp_dev.o: exp_dev.f90
 	$(FC) $(FCFLAGS) -c $<
 
-exp_cr.o: exp_cr.f90
+exp_repro.o: exp_repro.f90
 	$(FC) $(FCFLAGS) -c $<
 
-profile.o: profile.f90 exp_dev.o exp_cr.o
+profile.o: profile.f90 exp_dev.o exp_repro.o
 	$(FC) $(FCFLAGS) -c $<
 
 .PHONY: clean
 clean:
-	rm -f exp_dev.o exp_dev.mod exp_cr.o exp_cr_mod.mod profile.o runexp
+	rm -f exp_dev.o exp_dev.mod exp_repro.o exp_repro_mod.mod profile.o runexp
