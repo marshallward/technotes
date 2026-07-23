@@ -21,7 +21,7 @@ integer, parameter :: niter = 20
 real(kind=real64), parameter :: xmax = 0.5 * log(2._real64)
 
 real(kind=realq), allocatable :: xq(:), rq(:)
-real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_t(:)
+real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_fast(:), r_t(:)
 
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
@@ -34,7 +34,7 @@ logical :: invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref
 logical :: invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
 
 n = 10000000
-allocate(x(n), r(n), re(n), r_cr(n), r_t(n))
+allocate(x(n), r(n), re(n), r_cr(n), r_fast(n), r_t(n))
 allocate(xq(n), rq(n))
 
 ! Input range
@@ -59,54 +59,54 @@ clock_rate = real(count_rate)
 
 ! First verify some values
 
-print '(a22,3(1x,ES25.17E3))', "exp(0):", &
+print '(a26,3(1x,ES25.17E3))', "exp(0):", &
     exp(0._real128), exp(0._real64), exp_cr(0._real64)
-print '(a22,3(1x,ES25.17E3))', "exp(-0):", &
+print '(a26,3(1x,ES25.17E3))', "exp(-0):", &
     exp(-0._real128), exp(-0._real64), exp_cr(-0._real64)
-print '(a22,3(1x,ES25.17E3))', "exp(1):", &
+print '(a26,3(1x,ES25.17E3))', "exp(1):", &
     exp(1._real128), exp(1._real64), exp_cr(1._real64)
-print '(a22,3(1x,ES25.17E3))', "exp(0.33):", &
-!print '(a22,1x,Z32.32,2(1x,Z16.16))', "exp(0.33):", &
+print '(a26,3(1x,ES25.17E3))', "exp(0.33):", &
+!print '(a26,1x,Z32.32,2(1x,Z16.16))', "exp(0.33):", &
     exp(0.33_real128), exp(0.33_real64), exp_cr(0.33_real64)
 
 y = .3225414126648429_real64
-print '(a22,3(1x,ES25.17E3))', "exp(.322541412664843):", &
+print '(a26,3(1x,ES25.17E3))', "exp(.322541412664843):", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 
 ! Extreme values
 
-print '(a22,3(1x,ES25.17E3))', "overflow: exp(1000):", &
+print '(a26,3(1x,ES25.17E3))', "overflow: exp(1000):", &
     exp(1000._real128), exp(1000._real64), exp_cr(1000._real64)
-print '(a22,3(1x,ES25.17E3))', "underflow exp(-1000):", &
+print '(a26,3(1x,ES25.17E3))', "underflow exp(-1000):", &
     exp(-1000._real128), exp(-1000._real64), exp_cr(-1000._real64)
 
 ! Special values
 
 y = log(huge(1._real64))
-print '(a22,3(1x,ES25.17E3))', "largest float:", &
+print '(a26,3(1x,ES25.17E3))', "largest float:", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 y = log(tiny(1.0_real64))
-print '(a22,3(1x,ES25.17E3))', "smallest float:", &
+print '(a26,3(1x,ES25.17E3))', "smallest float:", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 y = -1060.0_real64 * log(2.0_real64)
-print '(a22,3(1x,ES25.17E3))', "median subnormal:", &
+print '(a26,3(1x,ES25.17E3))', "median subnormal:", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 !y = log(2.0_real64**(-1074))
 y = -1074.0_real64 * log(2.0_real64)
-print '(a22,3(1x,ES25.17E3))', "smallest subnormal:", &
+print '(a26,3(1x,ES25.17E3))', "smallest subnormal:", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 y = -1075.0_real64 * log(2.0_real64)
-print '(a22,3(1x,ES25.17E3))', "subnormal zero-cutoff", &
+print '(a26,3(1x,ES25.17E3))', "subnormal zero-cutoff", &
   exp(real(y, real128)), exp(y), exp_cr(y)
 
 y = ieee_value(y, ieee_positive_inf)
-print '(a22,3(1x,ES25.17E3))', "+Inf:", &
+print '(a26,3(1x,ES25.17E3))', "+Inf:", &
   exp(ieee_value(0._real128, ieee_positive_inf)), exp(y), exp_cr(y)
 y = ieee_value(y, ieee_negative_inf)
-print '(a22,3(1x,ES25.17E3))', "-Inf:", &
+print '(a26,3(1x,ES25.17E3))', "-Inf:", &
   exp(ieee_value(0._real128, ieee_negative_inf)), exp(y), exp_cr(y)
 y = ieee_value(y, ieee_quiet_nan)
-print '(a22,3(1x,ES25.17E3))', "NaN:", &
+print '(a26,3(1x,ES25.17E3))', "NaN:", &
   exp(ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_cr(y)
 
 !***
@@ -146,38 +146,78 @@ call ieee_set_flag(ieee_all, .false.)
 !****
 
 ! Intrinsic exp()
-re = exp(x)
+! Use the same explicit inner loop shape as exp_cr() so the timing compares
+! function cost rather than array-assignment lowering choices.
+!$omp simd
+do j = 1, size(x)
+  re(j) = exp(x(j))
+enddo
 call system_clock(count=c1)
 do i = 1, niter
-  re = exp(x)
+  !$omp simd
+  do j = 1, size(x)
+    re(j) = exp(x(j))
+  enddo
 end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a18,1x,g0)', "exp() time:", (c2 - c1) / clock_rate / niter
-print '(a18,1x,g0,1x,"x=",g0)', "err:", &
+print '(a26,1x,g0)', "exp() time:", (c2 - c1) / clock_rate / niter
+print '(a26,1x,g0)', "exp() time/elem:", (c2 - c1) / clock_rate / niter / n
+print '(a26,1x,g0,1x,"x=",g0)', "err:", &
     maxval(abs(re - rq)), x(maxloc(abs(re - rq)))
-print '(a18,1x,g0,1x,"x=",g0)', "rel err:", &
+print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
     maxval(abs((re - rq) / rq)), x(maxloc(abs((re - rq) / rq)))
 
 !****
 
 ! Elemental Remez+Estrin version
-r_cr = exp_cr(x)
-call system_clock(count=c1)
 !$omp simd
+do j = 1, size(x)
+  r_cr(j) = exp_cr(x(j))
+enddo
+call system_clock(count=c1)
 do i = 1, niter
-  r_cr = exp_cr(x)
+  !$omp simd
+  do j = 1, size(x)
+    r_cr(j) = exp_cr(x(j))
+  enddo
 end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a18,1x,g0)', "exp_cr() time:", (c2 - c1) / clock_rate / niter
-print '(a18,1x,g0,1x,"x=",g0)', "err:", &
+print '(a26,1x,g0)', "exp_cr() time:", (c2 - c1) / clock_rate / niter
+print '(a26,1x,g0)', "exp_cr() time/elem:", (c2 - c1) / clock_rate / niter / n
+print '(a26,1x,g0,1x,"x=",g0)', "err:", &
   maxval(abs(r_cr - rq)), x(maxloc(abs(r_cr - rq)))
-print '(a18,1x,g0,1x,"x=",g0)', "rel err:", &
+print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
   maxval(abs((r_cr - rq) / rq)), x(maxloc(abs((r_cr - rq) / rq)))
-print '(a18,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
+print '(a26,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
+
+!****
+
+! Fast finite-normal Remez+Estrin version
+!$omp simd
+do j = 1, size(x)
+  r_fast(j) = exp_cr_fast(x(j))
+enddo
+call system_clock(count=c1)
+do i = 1, niter
+  !$omp simd
+  do j = 1, size(x)
+    r_fast(j) = exp_cr_fast(x(j))
+  enddo
+end do
+call system_clock(count=c2)
+
+! Report results
+print '(a26,1x,g0)', "exp_cr_fast() time:", (c2 - c1) / clock_rate / niter
+print '(a26,1x,g0)', "exp_cr_fast() time/elem:", (c2 - c1) / clock_rate / niter / n
+print '(a26,1x,g0,1x,"x=",g0)', "err:", &
+  maxval(abs(r_fast - rq)), x(maxloc(abs(r_fast - rq)))
+print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
+  maxval(abs((r_fast - rq) / rq)), x(maxloc(abs((r_fast - rq) / rq)))
+print '(a26,1x,g0)', "r - exp_cr():", maxval(abs((r_fast - r_cr) / r_cr))
 
 !*!!****
 !*!
@@ -190,8 +230,8 @@ print '(a18,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
 !*!call system_clock(count=c2)
 !*!
 !*!! Report results
-!*!print '(a18,1x,g0)', "exp_1d() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "exp_1d() time:", (c2 - c1) / clock_rate / niter
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
 !*!
 !*!!****
 !*!
@@ -205,9 +245,9 @@ print '(a18,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
 !*!call system_clock(count=c2)
 !*!
 !*!! Report results
-!*!print '(a18,1x,g0)', "exp_1d_do_c() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
-!*!print '(a18,1x,g0)', "r - r[cpu]", maxval(abs(r - r_cr))
+!*!print '(a26,1x,g0)', "exp_1d_do_c() time:", (c2 - c1) / clock_rate / niter
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_cr))
 !*!
 !*!!****
 !*!
@@ -222,9 +262,9 @@ print '(a18,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
 !*!call system_clock(count=c2)
 !*!
 !*!! Report results
-!*!print '(a18,1x,g0)', "exp_cr loop() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
-!*!print '(a18,1x,g0)', "r - r[cpu]", maxval(abs(r - r_cr))
+!*!print '(a26,1x,g0)', "exp_cr loop() time:", (c2 - c1) / clock_rate / niter
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_cr))
 !*!
 !*!!****
 !*!
@@ -239,8 +279,8 @@ print '(a18,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
 !*!call system_clock(count=c2)
 !*!
 !*!! Report results
-!*!print '(a18,1x,g0)', "exp_taylor loop() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a18,1x,g0)', "err:", maxval(abs(r - rq))
-!*!print '(a18,1x,g0)', "r - r[cpu]", maxval(abs(r - r_t))
+!*!print '(a26,1x,g0)', "exp_taylor loop() time:", (c2 - c1) / clock_rate / niter
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_t))
 
 end

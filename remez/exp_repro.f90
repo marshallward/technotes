@@ -156,7 +156,7 @@ elemental function exp_cr(x) result(a)
   K = (transfer(kz, real64_mold) - round_bias) * I_NTABLE
 
   ! Cody-Waite splitting
-  ! Residual after subtracting Z*ln(2)/32
+  ! Residual after subtracting Z*ln(2)/NTABLE
   ! NOTE: May be reduced to `x - K * (TABLE_LN2_HI + TABLE_L2_LO)` which is no
   !   better than x - Z * TABLE_LN2
   r = (x - Z * TABLE_LN2_HI) - Z * TABLE_LN2_LO
@@ -206,6 +206,61 @@ elemental function exp_cr(x) result(a)
   r = transfer(pos_inf_bits, real64_mold)
   a = merge(r, a, transfer(x, int64_mold) == pos_inf_bits)
 end function exp_cr
+
+
+elemental function exp_cr_fast(x) result(a)
+  !$omp declare simd
+  !$acc routine seq
+  real(kind=real64), value, intent(in) :: x
+    !< Input value [nondim]
+  real(kind=real64) :: a
+    !< Exponential of x [nondim]
+
+  real(kind=real64) :: r
+  real(kind=real64) :: x_ln2
+  real(kind=real64) :: K
+  real(kind=real64) :: e
+
+  integer(kind=int64) :: eb, kb
+
+  real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
+
+  real(kind=real64), parameter :: INV_LN2 = 1.4426950408889634_real64
+  real(kind=real64), parameter :: LN2_HI = 6.93147180369123816490e-01_real64
+  real(kind=real64), parameter :: LN2_LO = 1.90821492927058770002e-10_real64
+
+  integer, parameter :: NTABLE = 1
+  real(kind=real64), parameter :: I_NTABLE = 1._real64 / real(NTABLE, real64)
+  real(kind=real64), parameter :: TABLE_INV_LN2 = NTABLE * INV_LN2
+  real(kind=real64), parameter :: TABLE_LN2_HI = I_NTABLE * LN2_HI
+  real(kind=real64), parameter :: TABLE_LN2_LO = I_NTABLE * LN2_LO
+
+  real(kind=real64) :: Z
+  integer(kind=int64) :: iz, kz
+  integer(int32) :: table_index
+
+  integer :: i
+  real(kind=real64), parameter :: exp2_table(0:NTABLE-1) = &
+      [(2._real64**(real(i, real64) / real(NTABLE, real64)), i=0,NTABLE-1)]
+  integer(int64), parameter :: index_mask = int(NTABLE - 1, int64)
+
+  x_ln2 = x * TABLE_INV_LN2
+  Z = (x_ln2 + round_bias) - round_bias
+
+  iz = transfer(Z + round_bias, int64_mold)
+  table_index = iand(iz, index_mask)
+
+  kz = iand(iz, not(index_mask))
+  K = (transfer(kz, real64_mold) - round_bias) * I_NTABLE
+
+  r = (x - Z * TABLE_LN2_HI) - Z * TABLE_LN2_LO
+  e = exp2_table(table_index) * exp_remez_estrin_10(r)
+
+  eb = transfer(e, int64_mold)
+  kb = transfer(K + round_bias, int64_mold)
+  eb = eb + shiftl(kb, expbit)
+  a = transfer(eb, 1.0_real64)
+end function exp_cr_fast
 
 
 pure function exp_remez_chebyshev(x) result(e)
