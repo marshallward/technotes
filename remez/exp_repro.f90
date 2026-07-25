@@ -82,21 +82,20 @@ elemental function exp_repro(x) result(a)
   end if
 
   ! *** Range reduction ***
-  ! Compute K = nint(x / ln2), r = x - K*ln2
 
+  ! Compute K = nint(x / ln2)
   x_ln2 = x * INV_LN2
-  K = (x_ln2 + round_bias) - round_bias    ! K = nint(x_ln2)
+  K = (x_ln2 + round_bias) - round_bias
 
   ! Cody-Waite: r = x - K*ln2 with extended precision
   r = (x - K * LN2_HI) - K * LN2_LO
 
   ! *** Polynomial approximation ***
-  ! exp(r) for r in [-ln2/2, ln2/2] using degree-10 Remez minimax polynomial
 
+  ! exp(r) for r in [-ln2/2, ln2/2] using degree-10 Remez minimax polynomial
   e = exp_remez_estrin_10(r)
 
   ! *** Scaling: multiply by 2^K ***
-  ! Use bit manipulation to add K to the exponent
 
   ! Handle over/underflow by splitting extreme K values
   j = merge(1022_int64, 0_int64, K < -1020.0_real64) &

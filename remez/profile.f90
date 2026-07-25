@@ -19,36 +19,37 @@ integer, parameter :: realq = merge(real128, real64, real128 > 0)
 
 integer, parameter :: niter = 20
 
-!real(kind=real64), parameter :: xmax = 0.5 * log(2._real64)
 real(kind=real64), parameter :: xmax = 10._real64
+real(kind=real64), parameter :: xmin = -xmax
+!real(kind=real64), parameter :: xmax = 0.5 * log(2._real64)
 !real(kind=real64), parameter :: xmax = 700._real64
 
-real(kind=realq), allocatable :: xq(:), rq(:)
-real(kind=real64), allocatable :: x(:), r(:), re(:), r_cr(:), r_fast(:), r_new(:)
+real(kind=real64), allocatable :: x(:), xio(:)
+
+real(kind=realq), allocatable :: e_quad(:), e_quad_io(:)
+real(kind=real64), allocatable :: re(:), r_new(:), e_svml_io(:), e_repro_io(:)
 
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
 
-integer :: i, j, n
+integer :: i, npts, npts_io
 real(kind=real64) :: y
 
-n = 10000000
-allocate(x(n), r(n), re(n), r_cr(n), r_fast(n), r_new(n))
-allocate(xq(n), rq(n))
+npts = 10000000
+allocate(x(npts))
+allocate(e_quad(npts), re(npts), r_new(npts))
 
 ! Input range
 
 ! Symmetric test
-x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
+!x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
+x = [(xmin + (i - 1) * (xmax - xmin) / (npts-1), i=1,npts)]
 
 ! Just negative numbers
 !x = [(-xmax + (i - 1) * (1. * xmax) / (n-1), i=1,n)]
 
-! NOTE: Using real64 to build the real128 x-points.  I think this is right?
-xq = real(x, real128)
-
 ! Reference realq values
-rq = exp(xq)
+e_quad = exp(real(x, kind=realq))
 
 ! Set up clock
 call system_clock(count_rate=count_rate, count_max=count_max)
@@ -59,96 +60,96 @@ clock_rate = real(count_rate)
 ! First verify some values
 
 print '(a26,3(1x,ES25.17E3))', "exp(0):", &
-    exp(0._real128), exp(0._real64), exp_repro(0._real64)
+    exp(0._realq), exp(0._real64), exp_repro(0._real64)
 print '(a26,3(1x,ES25.17E3))', "exp(-0):", &
-    exp(-0._real128), exp(-0._real64), exp_repro(-0._real64)
+    exp(-0._realq), exp(-0._real64), exp_repro(-0._real64)
 print '(a26,3(1x,ES25.17E3))', "exp(1):", &
-    exp(1._real128), exp(1._real64), exp_repro(1._real64)
+    exp(1._realq), exp(1._real64), exp_repro(1._real64)
 print '(a26,3(1x,ES25.17E3))', "exp(-1):", &
-    exp(-1._real128), exp(-1._real64), exp_repro(-1._real64)
+    exp(-1._realq), exp(-1._real64), exp_repro(-1._real64)
 print '(a26,3(1x,ES25.17E3))', "exp(0.33):", &
 !print '(a26,1x,Z32.32,2(1x,Z16.16))', "exp(0.33):", &
-    exp(0.33_real128), exp(0.33_real64), exp_repro(0.33_real64)
+    exp(0.33_realq), exp(0.33_real64), exp_repro(0.33_real64)
 
 y = .3225414126648429_real64
 print '(a26,3(1x,ES25.17E3))', "exp(.322541412664843):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 
 ! Range reduction edge cases
 y = log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "exp(ln(2)):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = -log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "exp(-ln(2)):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = 0.5_real64 * log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "exp(0.5*ln(2)):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 
 ! Tiny arguments (tests 1 + x accuracy)
 y = 1.0e-15_real64
 print '(a26,3(1x,ES25.17E3))', "exp(1e-15):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = -1.0e-15_real64
 print '(a26,3(1x,ES25.17E3))', "exp(-1e-15):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 
 ! Round-trip (accumulates log + exp error)
 y = log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "exp(log(2)):", &
-  exp(log(2.0_real128)), exp(y), exp_repro(y)
+  exp(log(2.0_realq)), exp(y), exp_repro(y)
 
 ! Extreme values
 
 y = 1000._real64
 print '(a26,3(1x,ES25.17E3))', "overflow: exp(1000):", &
-    exp(1000._real128), exp(y), exp_repro(y)
+    exp(1000._realq), exp(y), exp_repro(y)
 y = -1000._real64
 print '(a26,3(1x,ES25.17E3))', "underflow exp(-1000):", &
-    exp(-1000._real128), exp(y), exp_repro(y)
+    exp(-1000._realq), exp(y), exp_repro(y)
 
 ! Near overflow/underflow boundaries
 y = 709.78_real64
 print '(a26,3(1x,ES25.17E3))', "near overflow (709.78):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = -708.39_real64
 print '(a26,3(1x,ES25.17E3))', "near underflow (-708.39):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = -745.13_real64
 print '(a26,3(1x,ES25.17E3))', "subnormal region (-745.13):", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 
 ! Special values
 
 y = log(huge(1._real64))
 print '(a26,3(1x,ES25.17E3))', "largest float:", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = log(tiny(1.0_real64))
 print '(a26,3(1x,ES25.17E3))', "smallest float:", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = -1060.0_real64 * log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "median subnormal:", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 !y = log(2.0_real64**(-1074))
 y = -1074.0_real64 * log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "smallest subnormal:", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 y = -1075.0_real64 * log(2.0_real64)
 print '(a26,3(1x,ES25.17E3))', "subnormal zero-cutoff", &
-  exp(real(y, real128)), exp(y), exp_repro(y)
+  exp(real(y, realq)), exp(y), exp_repro(y)
 
 y = ieee_value(y, ieee_positive_inf)
 print '(a26,3(1x,ES25.17E3))', "+Inf:", &
-  exp(ieee_value(0._real128, ieee_positive_inf)), exp(y), exp_repro(y)
+  exp(ieee_value(0._realq, ieee_positive_inf)), exp(y), exp_repro(y)
 y = ieee_value(y, ieee_negative_inf)
 print '(a26,3(1x,ES25.17E3))', "-Inf:", &
-  exp(ieee_value(0._real128, ieee_negative_inf)), exp(y), exp_repro(y)
+  exp(ieee_value(0._realq, ieee_negative_inf)), exp(y), exp_repro(y)
 y = ieee_value(y, ieee_quiet_nan)
 print '(a26,3(1x,ES25.17E3))', "NaN:", &
-  exp(ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_repro(y)
+  exp(ieee_value(0._realq, ieee_quiet_nan)), exp(y), exp_repro(y)
 y = -ieee_value(y, ieee_quiet_nan)
 print '(a26,3(1x,ES25.17E3))', "-NaN:", &
-  exp(-ieee_value(0._real128, ieee_quiet_nan)), exp(y), exp_repro(y)
+  exp(-ieee_value(0._realq, ieee_quiet_nan)), exp(y), exp_repro(y)
 
 !***
 
@@ -183,12 +184,14 @@ end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a26,1x,g0)', "exp() time:", (c2 - c1) / clock_rate / niter
-print '(a26,1x,g0)', "exp() time/elem:", (c2 - c1) / clock_rate / niter / n
+print '(a26,1x,g0,1x,"ns")', "exp() time/elem:", &
+    (c2 - c1) / clock_rate / niter / npts * 1e9
 print '(a26,1x,g0,1x,"x=",g0)', "err:", &
-    maxval(abs(re - rq)), x(maxloc(abs(re - rq)))
+    maxval(abs(re - e_quad)), x(maxloc(abs(re - e_quad)))
 print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
-    maxval(abs((re - rq) / rq)), x(maxloc(abs((re - rq) / rq)))
+    maxval(abs((re - e_quad) / e_quad)), x(maxloc(abs((re - e_quad) / e_quad)))
+print '(a26,1x,g0,1x,"x=",g0)', "total err:", &
+    sum(abs(re - e_quad))
 
 !****
 
@@ -203,12 +206,12 @@ print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
 !call system_clock(count=c2)
 !
 !! Report results
-!print '(a26,1x,g0)', "exp_dev_cr() time:", (c2 - c1) / clock_rate / niter
-!print '(a26,1x,g0)', "exp_dev_cr() time/elem:", (c2 - c1) / clock_rate / niter / n
+!print '(a26,1x,g0)', "exp_dev_cr() time/elem:", &
+!    (c2 - c1) / clock_rate / niter / npts
 !print '(a26,1x,g0,1x,"x=",g0)', "err:", &
-!  maxval(abs(r_cr - rq)), x(maxloc(abs(r_cr - rq)))
+!  maxval(abs(r_cr - e_quad)), x(maxloc(abs(r_cr - e_quad)))
 !print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
-!  maxval(abs((r_cr - rq) / rq)), x(maxloc(abs((r_cr - rq) / rq)))
+!  maxval(abs((r_cr - e_quad) / e_quad)), x(maxloc(abs((r_cr - e_quad) / e_quad)))
 !print '(a26,1x,g0)', "r - exp():", maxval(abs((r_cr - re) / re))
 
 !****
@@ -226,12 +229,12 @@ print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
 !call system_clock(count=c2)
 !
 !! Report results
-!print '(a26,1x,g0)', "exp_dev_fast() time:", (c2 - c1) / clock_rate / niter
-!print '(a26,1x,g0)', "exp_dev_fast() time/elem:", (c2 - c1) / clock_rate / niter / n
+!print '(a26,1x,g0)', "exp_dev_fast() time/elem:", &
+!    (c2 - c1) / clock_rate / niter / npts
 !print '(a26,1x,g0,1x,"x=",g0)', "err:", &
-!  maxval(abs(r_fast - rq)), x(maxloc(abs(r_fast - rq)))
+!  maxval(abs(r_fast - e_quad)), x(maxloc(abs(r_fast - e_quad)))
 !print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
-!  maxval(abs((r_fast - rq) / rq)), x(maxloc(abs((r_fast - rq) / rq)))
+!  maxval(abs((r_fast - e_quad) / e_quad)), x(maxloc(abs((r_fast - e_quad) / e_quad)))
 !print '(a26,1x,g0)', "r - exp_dev_cr():", maxval(abs((r_fast - r_cr) / r_cr))
 
 !****
@@ -247,13 +250,15 @@ end do
 call system_clock(count=c2)
 
 ! Report results
-print '(a26,1x,g0)', "exp_repro() time:", (c2 - c1) / clock_rate / niter
-print '(a26,1x,g0)', "exp_repro() time/elem:", (c2 - c1) / clock_rate / niter / n
+print '(a26,1x,g0,1x,"ns")', "exp_repro() time/elem:", &
+    (c2 - c1) / clock_rate / niter / npts * 1e9
 print '(a26,1x,g0,1x,"x=",g0)', "err:", &
-  maxval(abs(r_new - rq)), x(maxloc(abs(r_new - rq)))
+  maxval(abs(r_new - e_quad)), x(maxloc(abs(r_new - e_quad)))
 print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
-  maxval(abs((r_new - rq) / rq)), x(maxloc(abs((r_new - rq) / rq)))
+  maxval(abs((r_new - e_quad) / e_quad)), x(maxloc(abs((r_new - e_quad) / e_quad)))
 print '(a26,1x,g0)', "r - exp():", maxval(abs((r_new - re) / re))
+print '(a26,1x,g0,1x,"x=",g0)', "total err:", &
+    sum(abs(r_new - e_quad))
 
 !*!!****
 !*!
@@ -267,7 +272,7 @@ print '(a26,1x,g0)', "r - exp():", maxval(abs((r_new - re) / re))
 !*!
 !*!! Report results
 !*!print '(a26,1x,g0)', "exp_1d() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - e_quad))
 !*!
 !*!!****
 !*!
@@ -282,7 +287,7 @@ print '(a26,1x,g0)', "r - exp():", maxval(abs((r_new - re) / re))
 !*!
 !*!! Report results
 !*!print '(a26,1x,g0)', "exp_1d_do_c() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - e_quad))
 !*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_cr))
 !*!
 !*!!****
@@ -299,7 +304,7 @@ print '(a26,1x,g0)', "r - exp():", maxval(abs((r_new - re) / re))
 !*!
 !*!! Report results
 !*!print '(a26,1x,g0)', "exp_dev loop() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - e_quad))
 !*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_cr))
 !*!
 !*!!****
@@ -316,8 +321,40 @@ print '(a26,1x,g0)', "r - exp():", maxval(abs((r_new - re) / re))
 !*!
 !*!! Report results
 !*!print '(a26,1x,g0)', "exp_taylor loop() time:", (c2 - c1) / clock_rate / niter
-!*!print '(a26,1x,g0)', "err:", maxval(abs(r - rq))
+!*!print '(a26,1x,g0)', "err:", maxval(abs(r - e_quad))
 !*!print '(a26,1x,g0)', "r - r[cpu]", maxval(abs(r - r_t))
+
+! Write output to CSV
+
+! Create a coarse axis
+npts_io = 100000
+
+allocate(xio(npts_io))
+xio = [(xmin + (i - 1) * (xmax - xmin) / (npts_io - 1), i=1,npts_io)]
+
+allocate(e_quad_io(npts_io), e_svml_io(npts_io), e_repro_io(npts_io))
+e_quad_io = exp(real(xio, kind=realq))
+e_svml_io = exp(xio)
+e_repro_io = exp_repro(xio)
+
+open(unit=10, file="exp_quad.csv", status="replace")
+do i=1,npts_io
+  write(10,'(ES25.17E3,",",ES25.17E3)') xio(i), e_quad_io(i)
+enddo
+close(10)
+
+open(unit=10, file="err_svml.csv", status="replace")
+do i=1,npts_io
+  write(10,'(ES25.17E3,",",ES25.17E3)') xio(i), abs(e_svml_io(i) - e_quad_io(i))
+enddo
+close(10)
+
+open(unit=10, file="err_repro.csv", status="replace")
+do i=1,npts_io
+  write(10,'(ES25.17E3,",",ES25.17E3)') xio(i), abs(e_repro_io(i) - e_quad_io(i))
+enddo
+close(10)
+
 
 contains
 
@@ -325,14 +362,14 @@ subroutine print_exception_flags(label, x0)
   character(len=*), intent(in) :: label
   real(kind=real64), intent(in) :: x0
 
-  real(kind=real128), volatile :: zq
+  real(kind=realq), volatile :: zq
   real(kind=real64), volatile :: z
   logical :: invalid_q, overflow_q, underflow_q, inexact_q, divzero_q
   logical :: invalid_ref, overflow_ref, underflow_ref, inexact_ref, divzero_ref
   logical :: invalid_cr, overflow_cr, underflow_cr, inexact_cr, divzero_cr
 
   call ieee_set_flag(ieee_all, .false.)
-  zq = exp(real(x0, real128))
+  zq = exp(real(x0, realq))
   call ieee_get_flag(ieee_invalid, invalid_q)
   call ieee_get_flag(ieee_overflow, overflow_q)
   call ieee_get_flag(ieee_underflow, underflow_q)

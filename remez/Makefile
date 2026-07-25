@@ -12,6 +12,7 @@
 FC = ftn
 FCFLAGS = -g -O3 -ipo
 FCFLAGS += -assume protect_parens
+#FCFLAGS += -fp-model source
 LD = ftn
 LDFLAGS = -ipo
 
