@@ -69,49 +69,48 @@ elemental function exp_repro(x) result(a)
 
   real(kind=real64) :: x_ln2
 
-  logical :: is_inf
+  logical :: is_finite
 
   ! *** Early Inf handler ***
   ! Must check before any arithmetic to avoid spurious Invalid signals
 
   xb = transfer(x, int64_mold)
-  is_inf = iand(xb, abs_mask) == pos_inf_bits
+  is_finite = iand(xb, abs_mask) /= pos_inf_bits
 
-  if (is_inf) then
+  if (is_finite) then
+    ! *** Range reduction ***
+
+    ! Compute K = nint(x / ln2)
+    x_ln2 = x * INV_LN2
+    K = (x_ln2 + round_bias) - round_bias
+
+    ! Cody-Waite: r = x - K*ln2 with extended precision
+    r = (x - K * LN2_HI) - K * LN2_LO
+
+    ! *** Polynomial approximation ***
+
+    ! exp(r) for r in [-ln2/2, ln2/2] using degree-10 Remez minimax polynomial
+    e = exp_remez_estrin_10(r)
+
+    ! *** Scaling: multiply by 2^K ***
+
+    ! Handle over/underflow by splitting extreme K values
+    j = merge(1022_int64, 0_int64, K < -1020.0_real64) &
+        + merge(-1022_int64, 0_int64, K > 1020.0_real64)
+
+    eb = transfer(e, int64_mold)
+    kb = transfer(K + round_bias, int64_mold)
+
+    eb = eb + shiftl(kb + j, expbit)
+    a = transfer(eb, real64_mold)
+
+    ! Apply correction factor for extreme K (triggers IEEE over/underflow signals)
+    fb = shiftl(1023_int64 - j, expbit)
+    a = a * transfer(fb, real64_mold)
+  else
     ! exp(-Inf) = 0, exp(+Inf) = +Inf
     a = merge(0._real64, transfer(pos_inf_bits, real64_mold), xb == neg_inf_bits)
-    return
-  end if
-
-  ! *** Range reduction ***
-
-  ! Compute K = nint(x / ln2)
-  x_ln2 = x * INV_LN2
-  K = (x_ln2 + round_bias) - round_bias
-
-  ! Cody-Waite: r = x - K*ln2 with extended precision
-  r = (x - K * LN2_HI) - K * LN2_LO
-
-  ! *** Polynomial approximation ***
-
-  ! exp(r) for r in [-ln2/2, ln2/2] using degree-10 Remez minimax polynomial
-  e = exp_remez_estrin_10(r)
-
-  ! *** Scaling: multiply by 2^K ***
-
-  ! Handle over/underflow by splitting extreme K values
-  j = merge(1022_int64, 0_int64, K < -1020.0_real64) &
-      + merge(-1022_int64, 0_int64, K > 1020.0_real64)
-
-  eb = transfer(e, int64_mold)
-  kb = transfer(K + round_bias, int64_mold)
-
-  eb = eb + shiftl(kb + j, expbit)
-  a = transfer(eb, real64_mold)
-
-  ! Apply correction factor for extreme K (triggers IEEE over/underflow signals)
-  fb = shiftl(1023_int64 - j, expbit)
-  a = a * transfer(fb, real64_mold)
+  endif
 end function exp_repro
 
 
