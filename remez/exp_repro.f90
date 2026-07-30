@@ -69,19 +69,17 @@ elemental function exp_repro(x) result(a)
 
   real(kind=real64) :: x_ln2
 
-  logical :: is_inf_or_nan
+  logical :: is_inf
 
-  ! *** Early Inf/NaN handler ***
-  ! Must check before any arithmetic to avoid spurious Invalid signals.
-  ! Both Inf and NaN have all exponent bits set; NaN also has non-zero mantissa,
-  ! so iand(xb, abs_mask) >= pos_inf_bits catches both.
+  ! *** Early Inf handler ***
+  ! Must check before any arithmetic to avoid spurious Invalid signals
 
   xb = transfer(x, int64_mold)
-  is_inf_or_nan = iand(xb, abs_mask) >= pos_inf_bits
+  is_inf = iand(xb, abs_mask) == pos_inf_bits
 
-  if (is_inf_or_nan) then
-    ! exp(-Inf) = 0; exp(+Inf) = +Inf; exp(NaN) = NaN (propagate)
-    a = merge(0._real64, x, xb == neg_inf_bits)
+  if (is_inf) then
+    ! exp(-Inf) = 0, exp(+Inf) = +Inf
+    a = merge(0._real64, transfer(pos_inf_bits, real64_mold), xb == neg_inf_bits)
     return
   end if
 
