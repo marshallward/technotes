@@ -11,15 +11,14 @@ real(kind=real64), parameter :: real64_mold = 0.
 ! Floating point model, where bit layout from high to low is (sign, exp, frac)
 integer, parameter :: bias = maxexponent(real64_mold) - 1
   !< The double precision exponent offset
-integer, parameter :: explen = storage_size(real64_mold) - digits(real64_mold)
+integer, parameter :: expwidth = storage_size(real64_mold) - digits(real64_mold)
   !< Bit size of exponent
 integer, parameter :: expbit = digits(real64_mold) - 1
   !< Position of lowest exponent bit
 
-! TODO: Portable versions?
-integer(int64), parameter :: pos_inf_bits = int(z'7FF0000000000000', int64)
+integer(int64), parameter :: pos_inf_bits = shiftl(2_int64**expwidth - 1, expbit)
   !< IEEE 64-bit +Inf
-integer(int64), parameter :: neg_inf_bits = int(z'FFF0000000000000', int64)
+integer(int64), parameter :: neg_inf_bits = ior(pos_inf_bits, shiftl(-1_int64, 63))
   !< IEEE 64-bit -Inf
 
 contains

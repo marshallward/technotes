@@ -21,13 +21,15 @@ real(kind=real64), parameter :: real64_mold = 0.
 ! IEEE 754 double precision layout
 integer, parameter :: expbit = digits(1._real64) - 1
   !< Position of lowest exponent bit (52)
+integer, parameter :: expwidth = storage_size(1._real64) - expbit - 1
+  !< Number of exponent bits (11)
 
 ! IEEE 754 special values
-integer(int64), parameter :: pos_inf_bits = int(z'7FF0000000000000', int64)
+integer(int64), parameter :: pos_inf_bits = shiftl(2_int64**expwidth - 1, expbit)
   !< IEEE 64-bit +Inf
-integer(int64), parameter :: neg_inf_bits = int(z'FFF0000000000000', int64)
+integer(int64), parameter :: neg_inf_bits = ior(pos_inf_bits, shiftl(-1_int64, 63))
   !< IEEE 64-bit -Inf
-integer(int64), parameter :: abs_mask = int(z'7FFFFFFFFFFFFFFF', int64)
+integer(int64), parameter :: abs_mask = not(shiftl(-1_int64, 63))
   !< Mask to clear sign bit
 
 contains
