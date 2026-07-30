@@ -1,5 +1,6 @@
 use, intrinsic :: iso_fortran_env, only : real64, real128
-use, intrinsic :: ieee_arithmetic, only : ieee_value, ieee_quiet_nan
+use, intrinsic :: ieee_arithmetic, only : ieee_value
+use, intrinsic :: ieee_arithmetic, only : ieee_quiet_nan, ieee_signaling_nan
 use, intrinsic :: ieee_arithmetic, only : ieee_positive_inf, ieee_negative_inf
 
 use, intrinsic :: ieee_exceptions, only : ieee_set_flag, ieee_get_flag
@@ -150,6 +151,12 @@ print '(a26,3(1x,ES25.17E3))', "NaN:", &
 y = -ieee_value(y, ieee_quiet_nan)
 print '(a26,3(1x,ES25.17E3))', "-NaN:", &
   exp(-ieee_value(0._realq, ieee_quiet_nan)), exp(y), exp_repro(y)
+y = ieee_value(y, ieee_quiet_nan)
+print '(a26,3(1x,ES25.17E3))', "sNaN:", &
+  exp(ieee_value(0._realq, ieee_signaling_nan)), exp(y), exp_repro(y)
+y = -ieee_value(y, ieee_signaling_nan)
+print '(a26,3(1x,ES25.17E3))', "-sNaN:", &
+  exp(-ieee_value(0._realq, ieee_signaling_nan)), exp(y), exp_repro(y)
 
 !***
 
@@ -166,6 +173,8 @@ call print_exception_flags("+Inf:", ieee_value(0.0_real64, ieee_positive_inf))
 call print_exception_flags("-Inf:", ieee_value(0.0_real64, ieee_negative_inf))
 call print_exception_flags("NaN:", ieee_value(0.0_real64, ieee_quiet_nan))
 call print_exception_flags("-NaN:", -ieee_value(0.0_real64, ieee_quiet_nan))
+call print_exception_flags("sNaN:", ieee_value(0.0_real64, ieee_signaling_nan))
+call print_exception_flags("-sNaN:", -ieee_value(0.0_real64, ieee_signaling_nan))
 
 call ieee_set_flag(ieee_all, .false.)
 
