@@ -72,7 +72,7 @@ elemental function exp_repro(x) result(a)
   logical :: is_finite
 
   xb = transfer(x, int64_mold)
-  is_finite = iand(xb, abs_mask) /= pos_inf_bits
+  is_finite = iand(xb, pos_inf_bits) /= pos_inf_bits
 
   if (is_finite) then
     ! *** Range reduction ***
@@ -106,7 +106,8 @@ elemental function exp_repro(x) result(a)
     a = a * transfer(fb, real64_mold)
   else
     ! exp(-Inf) = 0, exp(+Inf) = +Inf, exp(NaN) = NaN
-    a = merge(0._real64, x, xb == neg_inf_bits)
+    ! x + x = x for nonfinites.  Use this to trigger Invalid for signaled NaNs.
+    a = merge(0._real64, x + x, xb == neg_inf_bits)
   endif
 end function exp_repro
 

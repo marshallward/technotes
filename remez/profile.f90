@@ -401,7 +401,7 @@ subroutine print_exception_flags(label, x0)
   call ieee_get_flag(ieee_inexact, inexact_cr)
   call ieee_get_flag(ieee_divide_by_zero, divzero_cr)
 
-  print '(a26,3(1x,a5))', label, &
+  print '(a26,3(1x,a7))', label, &
       flag_char(invalid_q, 'I') // flag_char(overflow_q, 'O') &
         // flag_char(underflow_q, 'U') // flag_char(inexact_q, 'X') &
         // flag_char(divzero_q, 'Z'), &
