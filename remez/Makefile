@@ -1,18 +1,19 @@
-# GCC
-FC = gfortran
-FCFLAGS = -g -O3 \
-  -mavx -mfma -march=native \
-  -flto=auto -finline-functions
-LD = gfortran
-LDFLAGS = -flto=auto
+## GCC
+#FC = gfortran
+#FCFLAGS = -g -O3 \
+#  -mavx -mfma -march=native \
+#  -flto=auto -finline-functions
+#LD = gfortran
+#LDFLAGS = -flto=auto
 
-## ifx (Cray-wrapped)
-#FC = ftn
-#FCFLAGS = -g -O3 -ipo
-#FCFLAGS += -assume protect_parens
-##FCFLAGS += -fp-model source
-#LD = ftn
-#LDFLAGS = -ipo
+# ifx (Cray-wrapped)
+FC = ftn
+FCFLAGS = -g -O3 -ipo
+FCFLAGS += -assume protect_parens
+#FCFLAGS += -fp-model source
+FCFLAGS += -xCORE-AVX512
+LD = ftn
+LDFLAGS = -ipo
 
 ## NVHPC
 #FC = nvfortran
