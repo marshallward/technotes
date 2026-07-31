@@ -1,0 +1,28 @@
+# Makefile.in - processed by configure to create Makefile
+
+FC = @FC@
+LD = @FC@
+DEFS = @DEFS@
+FCFLAGS = @FCFLAGS@
+LDFLAGS = @LDFLAGS@
+
+all: runexp
+
+runexp: exp_dev.o exp_repro.o profile.o
+	$(LD) $(LDFLAGS) -o $@ $^
+
+exp_dev.o: exp_dev.f90
+	$(FC) $(FCFLAGS) -c $<
+
+exp_repro.o: exp_repro.F90 exp_repro.h
+	$(FC) $(FCFLAGS) $(DEFS) -c $<
+
+profile.o: profile.f90 exp_dev.o exp_repro.o
+	$(FC) $(FCFLAGS) -c $<
+
+.PHONY: clean distclean
+clean:
+	rm -f *.o *.mod runexp
+
+distclean: clean
+	rm -f Makefile config.log config.status

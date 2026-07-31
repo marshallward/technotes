@@ -1,3 +1,5 @@
+#include "exp_repro.h"
+
 !> Reproducible exponential function
 !!
 !! This module provides a reproducible implementation of exp() that produces
@@ -29,8 +31,6 @@ integer(int64), parameter :: pos_inf_bits = shiftl(2_int64**expwidth - 1, expbit
   !< IEEE 64-bit +Inf
 integer(int64), parameter :: neg_inf_bits = ior(pos_inf_bits, shiftl(-1_int64, 63))
   !< IEEE 64-bit -Inf
-integer(int64), parameter :: abs_mask = not(shiftl(-1_int64, 63))
-  !< Mask to clear sign bit
 
 contains
 
@@ -85,7 +85,7 @@ elemental function exp_repro(x) result(a)
 
   ! Compute K = nint(x / ln2)
   x_ln2 = x * INV_LN2
-  K = (x_ln2 + round_bias) - round_bias
+  K = NEAREST_INT(x_ln2)
 
   ! Cody-Waite: r = x - K*ln2 with extended precision
   r = (x - K * LN2_HI) - K * LN2_LO
@@ -107,7 +107,7 @@ elemental function exp_repro(x) result(a)
   eb = eb + shiftl(kb + j, expbit)
   a = transfer(eb, real64_mold)
 
-  ! Apply correction factor for extreme K (triggers IEEE over/underflow signals)
+  ! Apply correction factor for extreme K (triggers IEEE over/underflow signal)
   fb = shiftl(1023_int64 - j, expbit)
   a = a * transfer(fb, real64_mold)
 end function exp_repro
@@ -128,8 +128,11 @@ pure function exp_remez_estrin_10(x) result(e)
   real(kind=real64) :: q0, q1
 
   ! Remez minimax coefficients for (exp(x) - 1) / x on [-ln2/2, ln2/2]
+  ! NOTE: Manually adjusting c(0) to 1.0 modestly improved the max error, mean
+  !   error, and about 75% of points in testing.
   real(kind=real64), parameter :: c(0:10) = [ &
-    9.99999999999999889e-01_real64, &
+    !9.99999999999999889e-01_real64, &
+    1.00000000000000000e+00_real64, &
     5.00000000000003109e-01_real64, &
     1.66666666666674762e-01_real64, &
     4.16666666663442417e-02_real64, &
@@ -159,5 +162,15 @@ pure function exp_remez_estrin_10(x) result(e)
   ! Final assembly: 1 + x * p(x) ensures exp(0) = 1 exactly
   e = 1 + x * (q0 + x4 * q1 + x8 * (b4 + x2 * c(10)))
 end function exp_remez_estrin_10
+
+
+pure function anint_fast(x) result(a)
+  real(real64), intent(in) :: x
+  real(real64) :: a
+
+  real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
+
+  a = (x + round_bias) - round_bias
+end function anint_fast
 
 end module exp_repro_mod
