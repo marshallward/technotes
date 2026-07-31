@@ -71,11 +71,8 @@ elemental function exp_repro(x) result(a)
 
   logical :: is_finite
 
-  ! *** Early Inf handler ***
-  ! Must check before any arithmetic to avoid spurious Invalid signals
-
   xb = transfer(x, int64_mold)
-  is_finite = iand(xb, abs_mask) /= pos_inf_bits
+  is_finite = iand(xb, pos_inf_bits) /= pos_inf_bits
 
   if (is_finite) then
     ! *** Range reduction ***
@@ -108,8 +105,9 @@ elemental function exp_repro(x) result(a)
     fb = shiftl(1023_int64 - j, expbit)
     a = a * transfer(fb, real64_mold)
   else
-    ! exp(-Inf) = 0, exp(+Inf) = +Inf
-    a = merge(0._real64, transfer(pos_inf_bits, real64_mold), xb == neg_inf_bits)
+    ! exp(-Inf) = 0, exp(+Inf) = +Inf, exp(NaN) = NaN
+    ! x + x = x for nonfinites.  Use this to trigger Invalid for signaled NaNs.
+    a = merge(0._real64, x + x, xb == neg_inf_bits)
   endif
 end function exp_repro
 
