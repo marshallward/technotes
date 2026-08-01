@@ -128,22 +128,22 @@ pure function exp_remez_estrin_10(x) result(e)
   real(kind=real64) :: q0, q1
 
   ! Remez minimax coefficients for (exp(x) - 1) / x on [-ln2/2, ln2/2]
-  ! NOTE: Manually adjusting c(0) to 1.0 modestly improved the max error, mean
-  !   error, and about 75% of points in testing.
+  ! Original values were adjusted to minimize the # of points above 0.5 ULP.
   real(kind=real64), parameter :: c(0:10) = [ &
-    !9.99999999999999889e-01_real64, &
+    ! 9.99999999999999889e-01_real64, &
     1.00000000000000000e+00_real64, &
     5.00000000000003109e-01_real64, &
-    !0.5000000000000032_real64, &
     1.66666666666674762e-01_real64, &
-    4.16666666663442417e-02_real64, &
+    ! 4.16666666663442417e-02_real64, &
+    4.16666666663443042e-02_real64, &
     8.33333333278445630e-03_real64, &
     1.38888889936273166e-03_real64, &
     1.98412708336599035e-04_real64, &
     2.48014408391593750e-05_real64, &
     2.75566321051561213e-06_real64, &
     2.76488381734320880e-07_real64, &
-    2.52312075296588332e-08_real64 &
+    ! 2.52312075296588332e-08_real64 &
+    2.5229895e-08_real64 &
   ]
 
   ! Estrin's scheme: evaluate polynomial with maximum parallelism
