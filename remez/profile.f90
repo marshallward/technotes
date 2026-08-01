@@ -36,9 +36,15 @@ real :: clock_rate
 integer :: i, npts, npts_io
 real(kind=real64) :: y
 
+! ULP error metrics
+real(kind=real64), allocatable :: ulp_err(:), err(:), rel_err(:)
+real(kind=real64) :: ulp_val, mean_abs_err, mean_rel_err, rms_err, max_ulp
+integer :: n_correct, n_above_half_ulp, n_above_1ulp
+
 npts = 10000000
 allocate(x(npts))
 allocate(e_quad(npts), re(npts), r_new(npts))
+allocate(ulp_err(npts), err(npts), rel_err(npts))
 
 ! Input range
 
@@ -202,6 +208,36 @@ print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
 print '(a26,1x,g0,1x,"x=",g0)', "total err:", &
     sum(abs(re - e_quad))
 
+! ULP-based metrics for exp()
+err = abs(re - e_quad)
+rel_err = abs((re - e_quad) / e_quad)
+do i = 1, npts
+  ulp_val = spacing(real(e_quad(i), real64))
+  if (ulp_val > 0) then
+    ulp_err(i) = err(i) / ulp_val
+  else
+    ulp_err(i) = 0
+  endif
+enddo
+max_ulp = maxval(ulp_err)
+mean_abs_err = sum(err) / npts
+mean_rel_err = sum(rel_err) / npts
+rms_err = sqrt(sum(err**2) / npts)
+n_correct = count(ulp_err < 0.5_real64)
+n_above_half_ulp = count(ulp_err >= 0.5_real64)
+n_above_1ulp = count(ulp_err > 1.0_real64)
+
+print '(a26,1x,g0)', "max ULP err:", max_ulp
+print '(a26,1x,g0)', "mean abs err:", mean_abs_err
+print '(a26,1x,g0)', "mean rel err:", mean_rel_err
+print '(a26,1x,g0)', "RMS err:", rms_err
+print '(a26,1x,i0,1x,a,f6.2,a)', "correct (<0.5 ULP):", &
+    n_correct, "(", 100.0*real(n_correct)/npts, "%)"
+print '(a26,1x,i0,1x,a,f6.2,a)', "above 0.5 ULP:", &
+    n_above_half_ulp, "(", 100.0*real(n_above_half_ulp)/npts, "%)"
+print '(a26,1x,i0,1x,a,f6.2,a)', "above 1 ULP:", &
+    n_above_1ulp, "(", 100.0*real(n_above_1ulp)/npts, "%)"
+
 !****
 
 !! Elemental Remez+Estrin version
@@ -268,6 +304,36 @@ print '(a26,1x,g0,1x,"x=",g0)', "rel err:", &
 print '(a26,1x,g0)', "r - exp():", maxval(abs((r_new - re) / re))
 print '(a26,1x,g0,1x,"x=",g0)', "total err:", &
     sum(abs(r_new - e_quad))
+
+! ULP-based metrics for exp_repro()
+err = abs(r_new - e_quad)
+rel_err = abs((r_new - e_quad) / e_quad)
+do i = 1, npts
+  ulp_val = spacing(real(e_quad(i), real64))
+  if (ulp_val > 0) then
+    ulp_err(i) = err(i) / ulp_val
+  else
+    ulp_err(i) = 0
+  endif
+enddo
+max_ulp = maxval(ulp_err)
+mean_abs_err = sum(err) / npts
+mean_rel_err = sum(rel_err) / npts
+rms_err = sqrt(sum(err**2) / npts)
+n_correct = count(ulp_err < 0.5_real64)
+n_above_half_ulp = count(ulp_err >= 0.5_real64)
+n_above_1ulp = count(ulp_err > 1.0_real64)
+
+print '(a26,1x,g0)', "max ULP err:", max_ulp
+print '(a26,1x,g0)', "mean abs err:", mean_abs_err
+print '(a26,1x,g0)', "mean rel err:", mean_rel_err
+print '(a26,1x,g0)', "RMS err:", rms_err
+print '(a26,1x,i0,1x,a,f6.2,a)', "correct (<0.5 ULP):", &
+    n_correct, "(", 100.0*real(n_correct)/npts, "%)"
+print '(a26,1x,i0,1x,a,f6.2,a)', "above 0.5 ULP:", &
+    n_above_half_ulp, "(", 100.0*real(n_above_half_ulp)/npts, "%)"
+print '(a26,1x,i0,1x,a,f6.2,a)', "above 1 ULP:", &
+    n_above_1ulp, "(", 100.0*real(n_above_1ulp)/npts, "%)"
 
 !*!!****
 !*!

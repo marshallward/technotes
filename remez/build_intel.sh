@@ -1,7 +1,7 @@
 #!/bin/sh
 FC=ifx
 FCFLAGS="-g -O3 -ipo"
-#FCFLAGS+=" -fp-model source"
+FCFLAGS+=" -fp-model source"
 FCFLAGS+=" -xHost"
 LD=ifx
 LDFLAGS="-ipo"
