@@ -21,9 +21,9 @@ integer, parameter :: realq = merge(real128, real64, real128 > 0)
 integer, parameter :: niter = 20
 
 real(kind=real64), parameter :: xmax = 10._real64
-real(kind=real64), parameter :: xmin = -xmax
 !real(kind=real64), parameter :: xmax = 0.5 * log(2._real64)
 !real(kind=real64), parameter :: xmax = 700._real64
+real(kind=real64), parameter :: xmin = -xmax
 
 real(kind=real64), allocatable :: x(:), xio(:)
 
