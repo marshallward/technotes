@@ -34,7 +34,7 @@ integer :: count_rate, count_max, c1, c2
 real :: clock_rate
 
 integer :: i, npts, npts_io
-real(kind=real64) :: y
+real(kind=real64) :: y, I_npts
 
 ! ULP error metrics
 real(kind=real64), allocatable :: ulp_err(:), err(:), rel_err(:)
@@ -42,6 +42,7 @@ real(kind=real64) :: ulp_val, mean_abs_err, mean_rel_err, rms_err, max_ulp
 integer :: n_correct, n_above_half_ulp, n_above_1ulp
 
 npts = 10000000
+I_npts = 1. / (npts - 1)
 allocate(x(npts))
 allocate(e_quad(npts), re(npts), r_new(npts))
 allocate(ulp_err(npts), err(npts), rel_err(npts))
@@ -50,7 +51,7 @@ allocate(ulp_err(npts), err(npts), rel_err(npts))
 
 ! Symmetric test
 !x = [(-xmax + (i - 1) * (2. * xmax) / (n-1), i=1,n)]
-x = [(xmin + (i - 1) * (xmax - xmin) / (npts-1), i=1,npts)]
+x = [(xmin + (i - 1) * ((xmax - xmin) * I_npts), i=1,npts)]
 
 ! Just negative numbers
 !x = [(-xmax + (i - 1) * (1. * xmax) / (n-1), i=1,n)]
@@ -403,9 +404,10 @@ print '(a26,1x,i0,1x,a,f6.2,a)', "above 1 ULP:", &
 
 ! Create a coarse axis
 npts_io = 100000
+I_npts = 1. / (npts_io - 1)
 
 allocate(xio(npts_io))
-xio = [(xmin + (i - 1) * (xmax - xmin) / (npts_io - 1), i=1,npts_io)]
+xio = [(xmin + (i - 1) * ((xmax - xmin) * I_npts), i=1,npts_io)]
 
 allocate(e_quad_io(npts_io), e_svml_io(npts_io), e_repro_io(npts_io))
 e_quad_io = exp(real(xio, kind=realq))
@@ -429,6 +431,13 @@ do i=1,npts_io
   write(10,'(ES25.17E3,",",ES25.17E3)') xio(i), abs(e_repro_io(i) - e_quad_io(i))
 enddo
 close(10)
+
+open(unit=10, file="repro.csv", status="replace")
+do i=1,npts_io
+  write(10,'(ES25.17E3,",",ES25.17E3)') xio(i), e_repro_io(i)
+enddo
+close(10)
+
 
 
 contains
