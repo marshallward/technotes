@@ -409,7 +409,9 @@ I_npts = 1. / (npts_io - 1)
 allocate(xio(npts_io))
 xio = [(xmin + (i - 1) * ((xmax - xmin) * I_npts), i=1,npts_io)]
 
-allocate(e_quad_io(npts_io), e_svml_io(npts_io), e_repro_io(npts_io))
+allocate(e_quad_io(npts_io), e_svml_io(npts_io))
+allocate(e_repro_io(npts_io))
+
 e_quad_io = exp(real(xio, kind=realq))
 e_svml_io = exp(xio)
 e_repro_io = exp_repro(xio)

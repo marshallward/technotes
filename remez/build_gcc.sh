@@ -1,5 +1,7 @@
 #!/bin/sh
 FC=gfortran
+#FCFLAGS="-g -O0"
+#FCFLAGS="-g -O3"
 FCFLAGS="-g -O3 -mavx -mfma -march=native"
 FCFLAGS+=" -flto"
 LD=gfortran
