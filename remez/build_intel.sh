@@ -2,7 +2,7 @@
 FC=ifx
 FCFLAGS="-g -O3"
 FCFLAGS+=" -fp-model source"
-FCFLAGS+=" -xHost"
+#FCFLAGS+=" -xHost"
 #FCFLAGS+=" -fma"
 FCFLAGS+=" -ipo"
 LD=ifx

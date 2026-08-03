@@ -33,7 +33,7 @@ real(kind=real64), allocatable :: re(:), r_new(:), e_svml_io(:), e_repro_io(:)
 integer :: count_rate, count_max, c1, c2
 real :: clock_rate
 
-integer :: i, npts, npts_io
+integer :: i, j, npts, npts_io
 real(kind=real64) :: y, I_npts
 
 ! ULP error metrics

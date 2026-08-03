@@ -16,9 +16,9 @@ integer, parameter :: expwidth = storage_size(real64_mold) - digits(real64_mold)
 integer, parameter :: expbit = digits(real64_mold) - 1
   !< Position of lowest exponent bit
 
-integer(int64), parameter :: pos_inf_bits = shiftl(2_int64**expwidth - 1, expbit)
+integer(int64), parameter :: pos_inf_bits = ishft(2_int64**expwidth - 1, expbit)
   !< IEEE 64-bit +Inf
-integer(int64), parameter :: neg_inf_bits = ior(pos_inf_bits, shiftl(-1_int64, 63))
+integer(int64), parameter :: neg_inf_bits = ior(pos_inf_bits, ishft(-1_int64, 63))
   !< IEEE 64-bit -Inf
 
 contains
@@ -88,7 +88,7 @@ pure subroutine exp_dev_array(x, a)
 
     eb = transfer(e, int64_mold)
     kb = transfer(K + round_bias, int64_mold)
-    eb = eb + shiftl(kb, expbit)
+    eb = eb + ishft(kb, expbit)
     a(i) = transfer(eb, 1.0_real64)
   end do
 
@@ -139,10 +139,10 @@ pure subroutine exp_dev_array(x, a)
 
         eb = transfer(e, int64_mold)
         kb = transfer(K + round_bias, int64_mold)
-        eb = eb + shiftl(kb + j, expbit)
+        eb = eb + ishft(kb + j, expbit)
         a(i) = transfer(eb, 1.0_real64)
 
-        fb = shiftl(1023_int64 - j, expbit)
+        fb = ishft(1023_int64 - j, expbit)
         a(i) = a(i) * transfer(fb, 1.0_real64)
       end if
     end do
@@ -298,10 +298,10 @@ elemental function exp_dev_cr(x) result(a)
   eb = transfer(e, int64_mold)
   kb = transfer(K + round_bias, int64_mold)
 
-  eb = eb + shiftl(kb + j, expbit)
+  eb = eb + ishft(kb + j, expbit)
   a = transfer(eb, 1.0_real64)
 
-  fb = shiftl(1023_int64 - j, expbit)
+  fb = ishft(1023_int64 - j, expbit)
   a = a * transfer(fb, 1.0_real64)
 end function exp_dev_cr
 
@@ -355,7 +355,7 @@ elemental function exp_dev_fast(x) result(a)
 
   eb = transfer(e, int64_mold)
   kb = transfer(K + round_bias, int64_mold)
-  eb = eb + shiftl(kb, expbit)
+  eb = eb + ishft(kb, expbit)
   a = transfer(eb, 1.0_real64)
 end function exp_dev_fast
 
