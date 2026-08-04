@@ -17,7 +17,7 @@
 #ifdef PROTECT_PARENS
 
 ! Fast round-to-nearest-integer using bit trick
-#define NEAREST_INT(x) anint_fast(x)
+#define NEAREST_INT(x) rint_fast(x)
 
 #else
 

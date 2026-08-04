@@ -50,15 +50,24 @@ elemental function exp_repro(x) result(a)
   real(kind=real64) :: a
     !< exp(x)
 
-  ! Finite argument limits where exp(x) overflows or rounds to zero
-  real(kind=real64), parameter :: max_exp_arg = log(huge(real64_mold))
-  real(kind=real64), parameter :: min_exp_arg = log(tiny(real64_mold)) &
-      - real(digits(real64_mold), kind=real64) * log(2.0_real64)
+  ! Range of x before overflow
+  real(real64), parameter :: LN2 &
+      = transfer(int(z'3FE62E42FEFA39EF', int64), 0.0_real64)
+    ! 0.693147180559945309417232...
+  real(kind=real64), parameter :: xmax &
+      = real(maxexponent(x) + 1, kind(x)) * LN2
+  real(kind=real64), parameter :: xmin &
+      = real(minexponent(x) - digits(x) - 1, kind(x)) * LN2
 
   ! Range reduction: exp(x) = 2^K * exp(r), where r in [-ln2/2, ln2/2]
-  real(kind=real64) :: r
+  real(kind=real64) :: xc
+    ! x but bounded by xmin and xmax
   real(kind=real64) :: K
+    ! Nearest IEEE-rounded integer to x/ln2
+  real(kind=real64) :: r
+    ! Range-reduced value of x, r = x - K ln2
   real(kind=real64) :: e
+    ! exponent of ranged-reduced value, exp(r)
 
   ! Bit manipulation for fast 2^K scaling
   integer(kind=int64) :: eb, kb
@@ -68,15 +77,15 @@ elemental function exp_repro(x) result(a)
   real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
   real(kind=real64), parameter :: INV_LN2 &
       = transfer(int(z'3FF71547652B82FE', int64), real64_mold)
-      ! 1.4426950408889634073599...
+    ! 1.4426950408889634073599...
 
   ! Cody-Waite constants for accurate range reduction
   real(kind=real64), parameter :: LN2_HI &
       = transfer(int(z'3FE62E42FEE00000', real64), real64_mold)
-      ! 6.93147180369123816490e-01
+    ! 6.93147180369123816490e-01
   real(kind=real64), parameter :: LN2_LO &
       = transfer(real(z'3DEA39EF35793C76', int64), real64_mold)
-      ! 1.90821492927058770002e-10
+    ! 1.90821492927058770002e-10
 
   ! Further subdivide [-(1/2N) ln2, +(1/2N) ln2], use tables to scale back up.
   integer, parameter :: NTABLE = 1
@@ -112,21 +121,17 @@ elemental function exp_repro(x) result(a)
 
   ! *** Range reduction ***
 
+  xc = min(max(x, xmin), xmax)
+
   ! Compute K = nint(x / ln2)
-  x_ln2 = x * INV_LN2
+  x_ln2 = xc * INV_LN2
   K = NEAREST_INT(x_ln2)
 
-  K = min(max(K, -1024._real64), 1024._real64)
+  ! Limit K so that over/underflow can be caught in the subnormal handler
+  !K = min(max(K, -2048._real64), 1024._real64)
 
   ! Cody-Waite: r = x - K*ln2 with extended precision
-  r = (x - K * LN2_HI) - K * LN2_LO
-
-  !! Wrong, just testing performance
-  !if (x < log(tiny(real64_mold))) then
-  !  a = transfer(pos_inf_bits, real64_mold)
-  !  a = a * a
-  !  return
-  !endif
+  r = (xc - K * LN2_HI) - K * LN2_LO
 
   !*!! Table method
   !*!x_ln2 = x * TABLE_INV_LN2
@@ -681,13 +686,13 @@ pure function exp_remez_horner_6_n64(x) result(e)
 end function exp_remez_horner_6_n64
 
 
-pure function anint_fast(x) result(a)
+pure function rint_fast(x) result(a)
   real(real64), intent(in) :: x
   real(real64) :: a
 
   real(kind=real64), parameter :: round_bias = 1.5_real64 * 2_int64**52
 
   a = (x + round_bias) - round_bias
-end function anint_fast
+end function rint_fast
 
 end module exp_repro_mod
