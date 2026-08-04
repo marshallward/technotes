@@ -125,8 +125,9 @@ print '(a26,3(1x,ES25.17E3))', "overflow: exp(1e300):", &
     exp(yq), exp(y), exp_repro(y)
 
 y = 1e300_real64
+yq = 1e300_realq
 print '(a26,3(1x,ES25.17E3))', "overflow: exp(1e300):", &
-    exp(1e300_realq), exp(y), exp_repro(y)
+    exp(yq), exp(y), exp_repro(y)
 
 y = -1000._real64
 print '(a26,3(1x,ES25.17E3))', "underflow exp(-1000):", &
