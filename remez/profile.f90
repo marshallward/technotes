@@ -171,9 +171,12 @@ print '(a26,3(1x,ES25.17E3))', "-sNaN:", &
 ! inexact, divide-by-zero.
 print '(a26,3(1x,a7))', "IEEE flags:", "exp128", "exp()", "exp_repro"
 print '(a26,3(1x,a7))', "flag order:", "IOUXZ", "IOUXZ", "IOUXZ"
+call print_exception_flags("exact:", 0._real64)
 call print_exception_flags("normal:", 0.33_real64)
 call print_exception_flags("overflow:", 1000.0_real64)
+call print_exception_flags("megaflow:", 1000000.0_real64)
 call print_exception_flags("underflow:", -1000.0_real64)
+call print_exception_flags("microflow:", -1000000.0_real64)
 call print_exception_flags("largest float:", log(huge(1.0_real64)))
 call print_exception_flags("smallest normal:", log(tiny(1.0_real64)))
 call print_exception_flags("+Inf:", ieee_value(0.0_real64, ieee_positive_inf))
