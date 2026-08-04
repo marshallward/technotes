@@ -50,6 +50,11 @@ elemental function exp_repro(x) result(a)
   real(kind=real64) :: a
     !< exp(x)
 
+  ! Finite argument limits where exp(x) overflows or rounds to zero
+  real(kind=real64), parameter :: max_exp_arg = log(huge(real64_mold))
+  real(kind=real64), parameter :: min_exp_arg = log(tiny(real64_mold)) &
+      - real(digits(real64_mold), kind=real64) * log(2.0_real64)
+
   ! Range reduction: exp(x) = 2^K * exp(r), where r in [-ln2/2, ln2/2]
   real(kind=real64) :: r
   real(kind=real64) :: K
@@ -93,6 +98,7 @@ elemental function exp_repro(x) result(a)
   integer(int32) :: table_index
 
   logical :: nonfinite
+    ! True if finite x is outside the representable range of exp(x)
 
   xb = transfer(x, int64_mold)
   nonfinite = iand(xb, pos_inf_bits) == pos_inf_bits
@@ -110,8 +116,17 @@ elemental function exp_repro(x) result(a)
   x_ln2 = x * INV_LN2
   K = NEAREST_INT(x_ln2)
 
+  K = min(max(K, -1024._real64), 1024._real64)
+
   ! Cody-Waite: r = x - K*ln2 with extended precision
   r = (x - K * LN2_HI) - K * LN2_LO
+
+  !! Wrong, just testing performance
+  !if (x < log(tiny(real64_mold))) then
+  !  a = transfer(pos_inf_bits, real64_mold)
+  !  a = a * a
+  !  return
+  !endif
 
   !*!! Table method
   !*!x_ln2 = x * TABLE_INV_LN2
